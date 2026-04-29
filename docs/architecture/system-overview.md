@@ -1,0 +1,26 @@
+# System Overview
+
+## Purpose
+
+- Repository: `skill-creator`
+- Summary: Local web service for continuously collecting text/audio materials, drafting candidate skills, proposing promotions, and promoting approved skills into the user's context-infrastructure rules.
+
+## Major Areas
+
+- Backend API: `backend/skill_creator_service/` is a FastAPI service that owns privileged operations: file writes, DashScope ASR, OpenCode calls, approval, and promotion.
+- Frontend: `frontend/` is a Vite TypeScript app. It is currently a functional operator dashboard, not a polished normal-user product experience.
+- OpenCode config: `.opencode/agents/` defines constrained agents. `skill-use` is read-only; `skill-builder` is backend-controlled for draft/proposal jobs.
+- Runtime state: job history is service-local JSONL under ignored `data/`; candidate skill state remains outside this repo in context-infrastructure.
+- Documentation: `docs/` uses doc-flow durable docs plus active worklogs for handoff and future agent continuity.
+
+## Boundaries
+
+- Canonical candidate data lives in `context-infrastructure/contexts/skill_creator`, where each candidate has `index.md`, `draft.md`, `proposal.md`, and `materials/`.
+- Promotion writes approved drafts into `context-infrastructure/rules/skills`; promotion must be backend-owned and approval-gated.
+- Browser code is only a control surface. It must not receive provider credentials, write files, call OpenCode directly, or decide promotion safety.
+- DashScope realtime ASR is backend-owned. Text Material supports direct paste and ASR-to-draft; ASR-to-draft fills the text box first and only becomes candidate material after explicit save.
+
+## Evolution Notes
+
+- The initial implementation intentionally optimized for a working local full pipeline over UI quality. The current UI exposes pipeline mechanics directly and needs a product/UX pass.
+- The user clarified that normal Text Material should include both direct text entry and audio transcription into the text field before saving, separate from raw audio material ingestion.

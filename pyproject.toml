@@ -1,0 +1,24 @@
+[project]
+name = "skill-creator-service"
+version = "0.1.0"
+description = "Local web service for continuous skill creation from text and audio materials."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dashscope>=1.23.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.8.0",
+    "python-multipart>=0.0.9",
+    "pyyaml>=6.0.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["backend"]
+testpaths = ["tests"]

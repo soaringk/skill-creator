@@ -1,0 +1,40 @@
+version: 1
+documents:
+  - kind: architecture
+    scope: system-overview
+    path: docs/architecture/system-overview.md
+    purpose: "Current structure, boundaries, and evolution context."
+    query_tags:
+      - architecture
+      - boundaries
+      - evolution
+  - kind: constraint
+    scope: engineering-constraints
+    path: docs/constraints/engineering-constraints.md
+    purpose: "Stable rules, invariants, and compatibility boundaries."
+    query_tags:
+      - constraints
+      - compatibility
+      - workflow
+  - kind: decision
+    scope: decision-log
+    path: docs/decisions/decision-log.md
+    purpose: "Durable implementation or design decisions."
+    query_tags:
+      - decisions
+      - rationale
+  - kind: lesson
+    scope: lessons-learned
+    path: docs/lessons/lessons-learned.md
+    purpose: "Reusable lessons future contributors should not rediscover."
+    query_tags:
+      - lessons
+      - pitfalls
+  - kind: risk/open_question
+    scope: tech-debt-and-risks
+    path: docs/risks/tech-debt-and-risks.md
+    purpose: "Open risks, debt, and unresolved questions."
+    query_tags:
+      - risks
+      - debt
+      - open-questions
