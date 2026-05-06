@@ -762,13 +762,13 @@ function handleUseStreamEvent(event: UseStreamEvent): void {
 
 function parseDraftSections(draft: string): DraftSections {
   const raw = draft.trim();
-  const publishableHeading = raw.match(/^##\s+Publishable Skill\s*$/im);
+  const publishableHeading = raw.match(/^#{1,2}\s+Publishable Skill\s*$/im);
   if (!publishableHeading || publishableHeading.index === undefined) {
     return { publishable: "", review: "", raw };
   }
 
   const publishableStart = publishableHeading.index + publishableHeading[0].length;
-  const reviewMatch = raw.slice(publishableStart).match(/^##\s+Draft Review\s*$/im);
+  const reviewMatch = raw.slice(publishableStart).match(/^#{1,2}\s+Draft Review\s*$/im);
   if (!reviewMatch || reviewMatch.index === undefined) {
     return {
       publishable: raw.slice(publishableStart).trim(),

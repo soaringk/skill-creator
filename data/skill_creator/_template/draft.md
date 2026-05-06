@@ -4,7 +4,7 @@ generated_at:
 source_materials: []
 ---
 
-# Draft Skill
+# Publishable Skill
 
 ## When to Use
 
@@ -18,3 +18,9 @@ source_materials: []
 ## Failure Modes
 
 
+# Draft Review
+
+## Material Coverage
+
+
+## Refinement Notes

@@ -228,12 +228,13 @@ Work only inside `{context_root / slug}`.
 Read `index.md` and all materials under `materials/`.
 Update `draft.md` using the artifact contract from the `skill-builder` agent:
 - draft frontmatter with status and source material metadata
-- `# Draft Skill: <title>`
-- `## Publishable Skill` containing the clean runtime skill
-- `## Draft Review` containing `### Material Coverage` and `### Refinement Notes`
+- `# Publishable Skill` containing the clean runtime skill
+- `# Draft Review` containing `## Material Coverage` and `## Refinement Notes`
 
-The publishable section must be usable on its own after promotion. Keep source coverage,
-uncertainty, TODOs, and refinement guidance only in the draft review section.
+The candidate title already lives in `index.md`; do not repeat it as a heading in `draft.md`.
+Use `# Publishable Skill` and `# Draft Review` as the only H1 boundaries. Put runtime
+subsections under `##` headings. Keep source coverage, uncertainty, TODOs, and refinement
+guidance only in the draft review section.
 
 Also update `index.md` status to `drafted` if the draft is meaningfully populated.
 Do not promote the skill and do not modify unrelated files.

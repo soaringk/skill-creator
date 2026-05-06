@@ -17,19 +17,19 @@ def _target_name(category: str | None, slug: str) -> str:
     return f"{normalized_category}_{slug}.md"
 
 
-def _heading_pattern(heading: str) -> re.Pattern[str]:
-    return re.compile(rf"^##\s+{re.escape(heading)}\s*$", re.IGNORECASE | re.MULTILINE)
+def _draft_boundary_pattern(heading: str) -> re.Pattern[str]:
+    return re.compile(rf"^#{{1,2}}\s+{re.escape(heading)}\s*$", re.IGNORECASE | re.MULTILINE)
 
 
 def _section_start(text: str, heading: str, start: int) -> int:
-    match = _heading_pattern(heading).search(text, start)
+    match = _draft_boundary_pattern(heading).search(text, start)
     if not match:
         return len(text)
     return match.start()
 
 
 def publishable_body(draft_body: str) -> str:
-    publishable_match = _heading_pattern(PUBLISHABLE_HEADING).search(draft_body)
+    publishable_match = _draft_boundary_pattern(PUBLISHABLE_HEADING).search(draft_body)
     if publishable_match:
         section_start = publishable_match.end()
         section_end = _section_start(draft_body, "Draft Review", section_start)
@@ -39,9 +39,9 @@ def publishable_body(draft_body: str) -> str:
     kept: list[str] = []
     skipping = False
     for line in lines:
-        h2_match = re.match(r"^##\s+(.+?)\s*$", line)
-        if h2_match:
-            skipping = h2_match.group(1).strip().lower() in REVIEW_HEADINGS
+        heading_match = re.match(r"^#{1,2}\s+(.+?)\s*$", line)
+        if heading_match:
+            skipping = heading_match.group(1).strip().lower() in REVIEW_HEADINGS
         if not skipping:
             kept.append(line)
     return "\n".join(kept).strip() + "\n"

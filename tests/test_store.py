@@ -25,7 +25,7 @@ def make_context(root: Path) -> None:
         encoding="utf-8",
     )
     (template / "draft.md").write_text(
-        dump_markdown({"status": "empty", "generated_at": None, "source_materials": []}, "# Draft Skill\n"),
+        dump_markdown({"status": "empty", "generated_at": None, "source_materials": []}, "# Publishable Skill\n"),
         encoding="utf-8",
     )
     (template / "published.md").write_text(
@@ -85,23 +85,19 @@ def test_promote_writes_only_publishable_section(tmp_path: Path) -> None:
     (skill_dir / "draft.md").write_text(
         dump_markdown(
             {"status": "drafted"},
-            """# Draft Skill: Demo Skill
-
-## Publishable Skill
-
-# Demo Skill
+            """# Publishable Skill
 
 ## When to Use
 
 Use it.
 
-## Draft Review
+# Draft Review
 
-### Material Coverage
+## Material Coverage
 
 - `example.md`: shaped the trigger.
 
-### Refinement Notes
+## Refinement Notes
 
 - Add more examples.
 """,
@@ -113,8 +109,7 @@ Use it.
 
     assert target == rules_root / "workflow_demo_skill.md"
     target_text = target.read_text(encoding="utf-8")
-    assert target_text.startswith("# Demo Skill")
-    assert "## When to Use" in target_text
+    assert target_text.startswith("## When to Use")
     assert "Use it." in target_text
     assert "Material Coverage" not in target_text
     assert "Refinement Notes" not in target_text

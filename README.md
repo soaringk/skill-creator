@@ -15,6 +15,8 @@ Drafts have two layers:
 - `Publishable Skill`: clean runtime skill content.
 - `Draft Review`: user-visible QA metadata such as material coverage and refinement notes.
 
+The draft file uses `# Publishable Skill` and `# Draft Review` as stable parsing boundaries. Candidate identity stays in `index.md`; drafts should not repeat the title as another heading.
+
 Publishing writes only `Publishable Skill` content to `SKILL_CREATOR_RULES_ROOT`, updates `rules/skills/INDEX.md` when present, and saves the same snapshot in `published.md`.
 
 Draft generation runs as a background job. The UI polls `/api/jobs` and shows draft failures, including OpenCode connection failures.

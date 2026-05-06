@@ -74,10 +74,13 @@ confidence: medium
 
 `draft.md` 约定包含：
 
-- `## Publishable Skill`: 可独立运行的 skill 内容
-- `## Draft Review`: 用户可见的草案评审信息
-- `### Material Coverage`: 素材覆盖说明
-- `### Refinement Notes`: 后续补充建议
+- `# Publishable Skill`: 可独立运行的 skill 内容
+- `## When to Use`、`## Workflow`、`## Boundaries`、`## Failure Modes`: 发布内容内部小节
+- `# Draft Review`: 用户可见的草案评审信息
+- `## Material Coverage`: 素材覆盖说明
+- `## Refinement Notes`: 后续补充建议
+
+`# Publishable Skill` 和 `# Draft Review` 是 draft 的稳定解析边界。候选标题保存在 `index.md`，`draft.md` 不重复写标题，避免同一信息多处维护。
 
 发布时只把 `Publishable Skill` 内容写入 `rules/skills/`，并把同样内容写入 `published.md` 快照。草案评审信息不应成为运行时 skill 指令。
 

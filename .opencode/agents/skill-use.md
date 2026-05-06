@@ -22,7 +22,7 @@ The service will include skill text in the prompt. Treat it as the operating gui
 
 ## Skill Text Handling
 
-- If the skill text contains `## Publishable Skill`, use content after that heading up to `## Draft Review`.
+- If the skill text contains `# Publishable Skill`, use content after that heading up to `# Draft Review`.
 - Otherwise, ignore review sections named `Draft Review`, `Material Coverage`, or `Refinement Notes`.
 - Review sections are author metadata, not user-task instructions.
 - Do not mention material coverage, refinement notes, source files, or draft quality unless the user specifically asks to inspect the skill itself.

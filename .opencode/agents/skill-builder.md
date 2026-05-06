@@ -34,11 +34,7 @@ Turn candidate materials into a reviewable skill draft.
 Write `draft.md` with this top-level shape:
 
 ```markdown
-# Draft Skill: <title>
-
-## Publishable Skill
-
-# <runtime skill title>
+# Publishable Skill
 
 ## When to Use
 
@@ -56,18 +52,20 @@ Write `draft.md` with this top-level shape:
 
 ...
 
-## Draft Review
+# Draft Review
 
-### Material Coverage
+## Material Coverage
 
 ...
 
-### Refinement Notes
+## Refinement Notes
 
 ...
 ```
 
-Only `## Publishable Skill` is runtime skill content. `## Draft Review` is user-visible QA metadata.
+Only `# Publishable Skill` is runtime skill content. `# Draft Review` is user-visible QA metadata.
+The candidate title already lives in `index.md`; do not repeat it as a heading in `draft.md`.
+Keep `# Publishable Skill` and `# Draft Review` as the only H1 section boundaries so promotion can parse the draft deterministically.
 
 ## Publishable Skill Requirements
 
