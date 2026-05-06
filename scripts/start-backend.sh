@@ -16,9 +16,10 @@ if [[ -f "$PID_FILE" ]]; then
 fi
 
 cd "$ROOT"
-setsid -f env PYTHONPATH=backend \
+nohup env PYTHONPATH=backend \
   "$ROOT/.venv/bin/uvicorn" skill_creator_service.main:app --host 127.0.0.1 --port 8010 \
-  >"$LOG_FILE" 2>&1
+  >>"$LOG_FILE" 2>&1 &
+disown
 
 sleep 0.2
 pid="$(pgrep -f "$ROOT/.venv/bin/uvicorn skill_creator_service.main:app --host 127.0.0.1 --port 8010" | head -n 1 || true)"

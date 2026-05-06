@@ -12,22 +12,23 @@ export default defineConfig(({ mode }) => {
   const rootEnv = loadEnv(mode, path.resolve(process.cwd(), ".."), "");
   const env = { ...rootEnv, ...frontendEnv, ...process.env };
   const base = normalizeBasePath(env.VITE_BASE_PATH);
-  const devPrefix = base === "/" ? "" : base.slice(0, -1);
+
+  const proxyConfig = {
+    "/api": {
+      target: "http://127.0.0.1:8010",
+      changeOrigin: true
+    }
+  };
 
   return {
     base,
     server: {
       allowedHosts: ["kefan.life", "www.kefan.life"],
-      proxy: {
-        [`${devPrefix}/api`]: {
-          target: "http://127.0.0.1:8010",
-          changeOrigin: true,
-          rewrite: (path) => (devPrefix ? path.slice(devPrefix.length) : path)
-        }
-      }
+      proxy: proxyConfig
     },
     preview: {
-      allowedHosts: ["kefan.life", "www.kefan.life"]
+      allowedHosts: ["kefan.life", "www.kefan.life"],
+      proxy: proxyConfig
     }
   };
 });

@@ -17,11 +17,11 @@ fi
 
 cd "$ROOT/frontend"
 npm run build
-cd "$ROOT"
-setsid -f node scripts/serve-frontend.mjs >"$LOG_FILE" 2>&1
+nohup npm run preview >>"$LOG_FILE" 2>&1 &
+disown
 
 sleep 0.5
-pid="$(pgrep -f "node scripts/serve-frontend.mjs" | head -n 1 || true)"
+pid="$(pgrep -f "vite preview" | head -n 1 || true)"
 
 if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
   echo "Frontend did not start. Log: $LOG_FILE" >&2
