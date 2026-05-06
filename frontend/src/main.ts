@@ -7,7 +7,6 @@ type SkillSummary = {
   target_category?: string | null;
   material_count: number;
   usable_material_count: number;
-  readiness: number;
   updated_at?: string | null;
 };
 
@@ -395,7 +394,6 @@ function renderAddMaterial(): string {
 
 function renderSkillDetail(detail: SkillDetail): string {
   const slug = detail.summary.slug;
-  const readinessPercent = Math.round(detail.summary.readiness * 100);
   const statusClass = detail.summary.status.toLowerCase();
   
   return `
@@ -403,7 +401,7 @@ function renderSkillDetail(detail: SkillDetail): string {
       <h1 class="title">${escapeHtml(detail.summary.title)}</h1>
       <div class="meta">
         <span class="badge ${statusClass}">${escapeHtml(detail.summary.status)}</span>
-        <span class="text-sm">Readiness: ${readinessPercent}%</span>
+        <span class="text-sm">${detail.summary.usable_material_count}/${detail.summary.material_count} usable materials</span>
       </div>
       
       <div class="workflow-bar mt-3">

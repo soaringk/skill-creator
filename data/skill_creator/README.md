@@ -1,11 +1,11 @@
 # Skill Creator Workspace
 
-这个目录是未来 Skill Creator HTTP 服务的数据层。每个子目录代表一个候选 skill，网页上传的资料写入该候选目录的 `materials/`，系统根据 frontmatter 管理状态，材料足够后自动生成 skill 草案并向用户发起确认。
+这个目录是 Skill Creator HTTP 服务的默认数据层。每个子目录代表一个候选 skill，网页上传的资料写入该候选目录的 `materials/`，系统根据 frontmatter 管理状态，材料足够后自动生成 skill 草案并向用户发起确认。
 
 ## 目录模型
 
 ```text
-contexts/skill_creator/
+data/skill_creator/
 ├── _template/
 └── <skill_slug>/
     ├── index.md

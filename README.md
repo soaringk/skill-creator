@@ -1,6 +1,6 @@
 # Skill Creator
 
-Local web service for continuously collecting text/audio material, distilling candidate skills, proposing changes, and promoting approved skills into `~/context-infrastructure`.
+Local web service for continuously collecting text/audio material, distilling candidate skills, proposing changes, and promoting approved skills into this repo. Copy promoted skills to `context-infrastructure` manually when needed.
 
 ## Development
 
@@ -50,8 +50,9 @@ npm run dev
 Useful environment variables:
 
 - `SKILL_CREATOR_ADMIN_TOKEN`: required token for mutating API calls. The service rejects mutating requests when this is unset.
-- `SKILL_CREATOR_CONTEXT_ROOT`: defaults to `~/context-infrastructure/contexts/skill_creator`.
-- `SKILL_CREATOR_RULES_ROOT`: defaults to `~/context-infrastructure/rules/skills`.
+- `SKILL_CREATOR_CONTEXT_ROOT`: defaults to `data/skill_creator` in this repo.
+- `SKILL_CREATOR_RULES_ROOT`: defaults to `rules/skills` in this repo.
+- `SKILL_CREATOR_JOB_STORE`: defaults to `data/jobs.jsonl` in this repo.
 - `DASHSCOPE_API_KEY`: DashScope realtime ASR key.
 - `OPENCODE_SERVER_PASSWORD`: OpenCode Basic Auth password, if configured.
 - `VITE_BASE_PATH`: frontend public path. Use `/tools/skill-creator/` for the `kefan.life/tools/skill-creator` deployment.

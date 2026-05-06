@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/cody/skill-creator"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PID_FILE="$ROOT/data/skill-creator-frontend.pid"
 LOG_FILE="$ROOT/data/skill-creator-frontend.log"
 

@@ -26,7 +26,6 @@ def make_context(root: Path) -> None:
                 "target_category": "Workflow",
                 "material_count": 0,
                 "usable_material_count": 0,
-                "readiness": 0.0,
             },
             "# Candidate Skill\n",
         ),
@@ -61,7 +60,6 @@ def test_create_skill_and_add_text_material(tmp_path: Path) -> None:
     assert material.status == "usable"
     assert detail.summary.material_count == 1
     assert detail.summary.usable_material_count == 1
-    assert detail.summary.readiness == 0.5
 
 
 def test_rejects_bad_slug(tmp_path: Path) -> None:

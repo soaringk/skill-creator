@@ -1,11 +1,13 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
-import { extname, join, normalize } from "node:path";
+import { dirname, extname, join, normalize } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const host = "127.0.0.1";
 const port = 5173;
 const basePath = "/tools/skill-creator";
-const root = "/home/cody/skill-creator/frontend/dist";
+const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const root = join(projectRoot, "frontend", "dist");
 
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],

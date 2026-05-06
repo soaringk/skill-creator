@@ -15,7 +15,6 @@ class SkillSummary(BaseModel):
     target_category: str | None = None
     material_count: int = 0
     usable_material_count: int = 0
-    readiness: float = 0.0
     updated_at: str | None = None
 
 

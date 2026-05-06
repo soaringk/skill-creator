@@ -61,7 +61,7 @@ def load_settings() -> Settings:
         job_store_path=_expand_path(
             os.getenv(
                 "SKILL_CREATOR_JOB_STORE",
-                str(Path.cwd() / "data" / "jobs.jsonl"),
+                str(PROJECT_ROOT / "data" / "jobs.jsonl"),
             )
         ),
         admin_token=os.getenv("SKILL_CREATOR_ADMIN_TOKEN", ""),

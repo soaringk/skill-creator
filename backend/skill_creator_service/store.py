@@ -76,7 +76,6 @@ class SkillStore:
             target_category=frontmatter.get("target_category"),
             material_count=int(frontmatter.get("material_count") or 0),
             usable_material_count=int(frontmatter.get("usable_material_count") or 0),
-            readiness=float(frontmatter.get("readiness") or 0.0),
             updated_at=str(frontmatter.get("updated_at") or "") or None,
         )
 
@@ -142,7 +141,6 @@ class SkillStore:
             "updated_at": now,
             "material_count": 0,
             "usable_material_count": 0,
-            "readiness": 0.0,
         }
         self._write_doc(skill_dir / "index.md", frontmatter, body)
         self.refresh_counts(slug)
@@ -314,7 +312,6 @@ class SkillStore:
         materials = self.list_materials(slug)
         frontmatter["material_count"] = len(materials)
         frontmatter["usable_material_count"] = sum(1 for item in materials if item.status == "usable")
-        frontmatter["readiness"] = min(1.0, frontmatter["usable_material_count"] / 2)
         frontmatter["updated_at"] = utc_now()
         self._write_doc(index_path, frontmatter, body)
 
