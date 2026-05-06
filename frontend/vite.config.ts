@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
   return {
     base,
     server: {
+      allowedHosts: ["kefan.life", "www.kefan.life"],
       proxy: {
         [`${devPrefix}/api`]: {
           target: "http://127.0.0.1:8010",
@@ -24,6 +25,9 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => (devPrefix ? path.slice(devPrefix.length) : path)
         }
       }
+    },
+    preview: {
+      allowedHosts: ["kefan.life", "www.kefan.life"]
     }
   };
 });

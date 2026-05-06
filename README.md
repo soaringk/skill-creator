@@ -58,49 +58,50 @@ Useful environment variables:
 
 The backend and Vite config both load these from `.env` in the repo root. Process environment values take precedence over `.env`.
 
-## Deploy Under A Domain Subpath
+## Public Deployment
 
-To serve the app at:
+The public page is served by nginx at:
 
 ```text
 https://kefan.life/tools/skill-creator/
 ```
 
-set `VITE_BASE_PATH=/tools/skill-creator/` in repo-root `.env`, then build the frontend normally:
-
-```bash
-cd /home/cody/skill-creator/frontend
-npm_config_cache=/tmp/npm-cache npm run build
-```
-
-The generated files in `frontend/dist/` will reference assets and API calls below `/tools/skill-creator/`.
-
-Run the backend privately on localhost:
+This repo handles the local frontend/backend processes and nginx proxy routes. Run:
 
 ```bash
 cd /home/cody/skill-creator
-PYTHONPATH=backend UV_CACHE_DIR=/tmp/uv-cache \
-  uv run uvicorn skill_creator_service.main:app --host 127.0.0.1 --port 8010
+./scripts/deploy-public.sh
 ```
 
-Reverse proxy requirements:
+The deploy script:
 
-- Serve `frontend/dist/` at `/tools/skill-creator/`.
-- Forward `/tools/skill-creator/api/*` to `http://127.0.0.1:8010/api/*`.
-- Keep the backend bound to `127.0.0.1`; do not expose port `8010` directly.
+- adds the nginx API proxy for `/tools/skill-creator/api/*`
+- adds the nginx frontend proxy for `/tools/skill-creator/*`
+- starts the backend manually on `127.0.0.1:8010`
+- builds and starts the frontend static server manually on `127.0.0.1:5173`
 
-Example Nginx shape:
+Backend process controls:
+
+```bash
+./scripts/start-backend.sh
+./scripts/stop-backend.sh
+./scripts/start-frontend.sh
+./scripts/stop-frontend.sh
+```
+
+Nginx shape:
 
 ```nginx
-location /tools/skill-creator/api/ {
+location ^~ /tools/skill-creator/api/ {
     proxy_pass http://127.0.0.1:8010/api/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
 }
 
-location /tools/skill-creator/ {
-    alias /home/cody/skill-creator/frontend/dist/;
-    try_files $uri $uri/ /tools/skill-creator/index.html;
+location ^~ /tools/skill-creator/ {
+    proxy_pass http://127.0.0.1:5173;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
 }
 ```
 
