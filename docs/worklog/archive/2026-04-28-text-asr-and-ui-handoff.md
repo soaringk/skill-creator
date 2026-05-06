@@ -8,7 +8,7 @@
 
 - User request: Clarify that Text Material should support direct text input or realtime-ASR transcription into the text box before saving; document project context for another agent to improve UI/UX.
 - Desired outcome: Add a text-draft transcription interaction and durable docs that explain system behavior, architecture, constraints, risks, and UX direction.
-- Constraints: Keep privileged actions backend-owned; keep context-infrastructure as canonical candidate state; do not expose DashScope credentials to browser code.
+- Constraints: Keep privileged actions backend-owned; keep the configured context root as canonical candidate state; do not expose DashScope credentials to browser code.
 
 ## Initial Context
 
@@ -44,7 +44,7 @@
 
 ### Architecture
 
-- Candidate data is canonical in `context-infrastructure`; this repo owns service/UI/runtime job state and local OpenCode agent config.
+- Candidate data is canonical in the configured context root (defaulting to local `data/`); this repo owns service/UI/runtime job state and local OpenCode agent config.
 - Text Material has two entry modes: direct paste and ASR-to-draft. ASR-to-draft must not save candidate state until the user explicitly submits the text material.
 
 ### Constraints

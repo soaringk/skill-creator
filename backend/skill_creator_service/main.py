@@ -10,7 +10,7 @@ from .asr import transcribe_with_dashscope_realtime
 from .config import load_settings
 from .jobs import JobRunner, JobStore
 from .models import CreateSkillRequest, JobRecord, TextMaterialRequest, UseSkillRequest
-from .opencode import OpenCodeClient, OpenCodeConfig, draft_prompt, propose_prompt
+from .opencode import OpenCodeClient, OpenCodeConfig, draft_prompt
 from .promotion import promote_skill
 from .store import SkillStore, StoreError
 

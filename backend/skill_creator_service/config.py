@@ -74,7 +74,9 @@ def load_settings() -> Settings:
         opencode_base_url=os.getenv("OPENCODE_BASE_URL", "http://127.0.0.1:4096"),
         opencode_username=os.getenv("OPENCODE_SERVER_USERNAME", "opencode"),
         opencode_password=os.getenv("OPENCODE_SERVER_PASSWORD", ""),
-        opencode_directory=_expand_path(os.getenv("OPENCODE_DIRECTORY", str(PROJECT_ROOT))),
+        opencode_directory=_expand_path(
+            os.getenv("OPENCODE_DIRECTORY", str(PROJECT_ROOT))
+        ),
         opencode_model=os.getenv("OPENCODE_MODEL", "glm-5"),
-        opencode_provider=os.getenv("OPENCODE_PROVIDER", "zai-coding-plan"),
+        opencode_provider=os.getenv("OPENCODE_PROVIDER", "alibaba-coding-plan-cn"),
     )

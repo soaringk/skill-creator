@@ -1,6 +1,6 @@
 # Skill Creator
 
-Local web service for continuously collecting text/audio material, distilling candidate skills, proposing changes, and promoting approved skills into this repo. Copy promoted skills to `context-infrastructure` manually when needed.
+Local web service for continuously collecting text/audio material, distilling candidate skills, and promoting approved skills to a configured rules repository.
 
 ## Development
 
