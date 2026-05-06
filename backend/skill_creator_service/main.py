@@ -60,7 +60,7 @@ def list_skills():
     return store.list_skills()
 
 
-@app.post("/api/skills", dependencies=[Depends(require_admin)])
+@app.post("/api/skills")
 def create_skill(request: CreateSkillRequest):
     try:
         return store.create_skill(
@@ -83,21 +83,23 @@ def get_skill(slug: str):
         raise handle_store_error(exc) from exc
 
 
-@app.post("/api/skills/{slug}/materials/text", dependencies=[Depends(require_admin)])
+@app.post("/api/skills/{slug}/materials/text")
 def add_text_material(slug: str, request: TextMaterialRequest):
     try:
-        return store.add_text_material(
+        result = store.add_text_material(
             slug,
             text=request.text,
             source_url=request.source_url,
             confidence=request.confidence,
             topics=request.topics,
         )
+        draft(slug)
+        return result
     except StoreError as exc:
         raise handle_store_error(exc) from exc
 
 
-@app.post("/api/asr/text-draft", dependencies=[Depends(require_admin)])
+@app.post("/api/asr/text-draft")
 async def transcribe_text_draft(file: UploadFile = File(...)):
     content = await file.read()
     suffix = Path(file.filename or "audio").suffix
@@ -113,7 +115,7 @@ async def transcribe_text_draft(file: UploadFile = File(...)):
     return {"text": result.text, "request_id": result.request_id}
 
 
-@app.post("/api/skills/{slug}/materials/audio", dependencies=[Depends(require_admin)])
+@app.post("/api/skills/{slug}/materials/audio")
 async def add_audio_material(slug: str, file: UploadFile = File(...)):
     try:
         content = await file.read()
@@ -142,6 +144,7 @@ async def add_audio_material(slug: str, file: UploadFile = File(...)):
                 model=settings.dashscope_model,
             )
             store.update_audio_asr(slug, material.id, "done", transcript_file=transcript_file)
+            draft(slug)
             return {"transcript_file": transcript_file, "request_id": result.request_id}
         except Exception as exc:
             store.update_audio_asr(slug, material.id, "failed", error_message=str(exc))
@@ -156,7 +159,7 @@ async def add_audio_material(slug: str, file: UploadFile = File(...)):
     return {"material": material, "job": job}
 
 
-@app.post("/api/skills/{slug}/draft", dependencies=[Depends(require_admin)])
+@app.post("/api/skills/{slug}/draft")
 def draft(slug: str):
     def task(job_id: str):
         session_id = opencode.create_session(f"Draft skill: {slug}")
@@ -179,7 +182,7 @@ def promote(slug: str):
         raise handle_store_error(exc) from exc
 
 
-@app.post("/api/skills/{slug}/use", dependencies=[Depends(require_admin)])
+@app.post("/api/skills/{slug}/use")
 def use_skill(slug: str, request: UseSkillRequest):
     try:
         detail = store.get_skill(slug)

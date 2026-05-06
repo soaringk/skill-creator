@@ -43,7 +43,6 @@ const state = {
   skills: [] as SkillSummary[],
   selectedSlug: null as string | null,
   detail: null as SkillDetail | null,
-  token: localStorage.getItem("skillCreatorAdminToken") || "",
   error: "",
   useSession: "",
   transcribing: false,
@@ -73,7 +72,12 @@ function apiUrl(path: string): string {
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
-  if (state.token) headers.set("X-Admin-Token", state.token);
+  
+  if (path.endsWith('/promote')) {
+    const token = prompt("请输入 Admin Token 以发布 Skill:");
+    if (!token) throw new Error("发布需要 Admin Token");
+    headers.set("X-Admin-Token", token.trim());
+  }
   
   const response = await fetch(apiUrl(path), { ...options, headers });
   if (!response.ok) {
@@ -99,12 +103,6 @@ async function load(): Promise<void> {
   } catch (error) {
     state.error = error instanceof Error ? error.message : String(error);
   }
-  render();
-}
-
-function saveToken(value: string): void {
-  state.token = value.trim();
-  localStorage.setItem("skillCreatorAdminToken", state.token);
   render();
 }
 
@@ -250,7 +248,6 @@ function render(): void {
           `<button class="nav-btn" id="back-btn">← Skill 候选</button>` : 
           `<div style="font-size:18px;">Skill Creator</div>`
         }
-        <button class="nav-btn" id="settings-btn" style="font-size:20px;">⚙️</button>
       </nav>
 
       <div class="sidebar ${state.isMobileListVisible ? '' : 'hidden-on-mobile'} ${state.isSidebarCollapsed ? 'collapsed' : ''}">
@@ -261,12 +258,6 @@ function render(): void {
             <button class="nav-btn desktop-only" id="close-sidebar-btn" style="font-size:20px; padding:0 4px;">✕</button>
           </div>
         </div>
-        ${state.settingsOpen ? `
-          <div style="padding: 16px; border-bottom: 1px solid var(--border); background: #f9f9f9;">
-            <p class="text-sm text-muted mb-2">Admin Token</p>
-            <input type="password" id="token-input" value="${escapeHtml(state.token)}" placeholder="Enter token..." />
-          </div>
-        ` : ''}
         <div class="skill-list">
           ${state.skills.map(renderSkillCard).join("") || `<div class="text-muted text-center mt-3">暂无候选。</div>`}
         </div>
@@ -447,7 +438,7 @@ function renderSkillDetail(detail: SkillDetail): string {
       <div class="area-header">3. 测试 Skill</div>
       <div class="card">
         <form id="use-skill">
-          <textarea name="prompt" rows="3" placeholder="向只读代理提问..." required></textarea>
+          <textarea name="prompt" rows="3" placeholder="向只读 Agent 提问..." required></textarea>
           <select name="source" class="mt-2">
             <option value="promoted">已发布的 Skill</option>
             <option value="draft">草稿</option>
@@ -475,11 +466,6 @@ function attachListeners() {
     render();
   });
   
-  document.querySelector<HTMLButtonElement>('#settings-btn')?.addEventListener('click', () => {
-    state.settingsOpen = !state.settingsOpen;
-    render();
-  });
-
   document.querySelector<HTMLButtonElement>('#toggle-sidebar-btn')?.addEventListener('click', () => {
     state.isSidebarCollapsed = !state.isSidebarCollapsed;
     render();
@@ -543,10 +529,6 @@ function attachListeners() {
   document.querySelector<HTMLButtonElement>('#close-create-btn')?.addEventListener('click', () => {
     state.isModalOpen = false;
     render();
-  });
-  
-  document.querySelector<HTMLInputElement>('#token-input')?.addEventListener('change', (e) => {
-    saveToken((e.target as HTMLInputElement).value);
   });
 
   // File Drop styling for standard file inputs
