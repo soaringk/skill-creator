@@ -1,12 +1,17 @@
 .venv/
 __pycache__/
-.pytest_cache/
+.pytest_cache__/
 .mypy_cache/
 .ruff_cache/
 *.pyc
-data/
+data/jobs.jsonl
 dist/
 frontend/dist/
 frontend/node_modules/
 .env
 .DS_Store
+
+# Skill candidate workspace (keep template and README, ignore user data)
+data/skill_creator/*/
+!data/skill_creator/_template/
+!data/skill_creator/README.md

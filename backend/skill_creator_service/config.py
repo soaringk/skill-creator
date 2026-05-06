@@ -47,7 +47,7 @@ def load_settings() -> Settings:
     context_root = _expand_path(
         os.getenv(
             "SKILL_CREATOR_CONTEXT_ROOT",
-            "~/context-infrastructure/contexts/skill_creator",
+            str(PROJECT_ROOT / "data" / "skill_creator"),
         )
     )
     return Settings(
@@ -55,7 +55,7 @@ def load_settings() -> Settings:
         rules_root=_expand_path(
             os.getenv(
                 "SKILL_CREATOR_RULES_ROOT",
-                "~/context-infrastructure/rules/skills",
+                str(PROJECT_ROOT / "rules" / "skills"),
             )
         ),
         job_store_path=_expand_path(
