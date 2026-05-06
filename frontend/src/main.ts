@@ -18,6 +18,7 @@ type MaterialSummary = {
   uploaded_at?: string | null;
   source_file?: string | null;
   asr?: Record<string, unknown>;
+  content?: string;
 };
 
 type SkillDetail = {
@@ -42,7 +43,6 @@ const state = {
   skills: [] as SkillSummary[],
   selectedSlug: null as string | null,
   detail: null as SkillDetail | null,
-  jobs: [] as JobRecord[],
   token: localStorage.getItem("skillCreatorAdminToken") || "",
   error: "",
   useSession: "",
@@ -85,12 +85,8 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 async function load(): Promise<void> {
   try {
-    const [skills, jobs] = await Promise.all([
-      api<SkillSummary[]>("/api/skills"),
-      api<JobRecord[]>("/api/jobs")
-    ]);
+    const skills = await api<SkillSummary[]>("/api/skills");
     state.skills = skills;
-    state.jobs = jobs;
     
     if (!state.selectedSlug && skills.length > 0) {
       state.selectedSlug = skills[0].slug;
@@ -147,7 +143,7 @@ async function addText(event: Event): Promise<void> {
     method: "POST",
     body: JSON.stringify({
       text: String(form.get("text") || ""),
-      source_url: String(form.get("source_url") || "") || null,
+      source_url: null,
       confidence: String(form.get("confidence") || "medium"),
       topics: []
     })
@@ -251,7 +247,7 @@ function render(): void {
     <div class="app-layout">
       <nav class="mobile-nav">
         ${!state.isMobileListVisible ? 
-          `<button class="nav-btn" id="back-btn">← Candidates</button>` : 
+          `<button class="nav-btn" id="back-btn">← Skill 候选</button>` : 
           `<div style="font-size:18px;">Skill Creator</div>`
         }
         <button class="nav-btn" id="settings-btn" style="font-size:20px;">⚙️</button>
@@ -259,7 +255,7 @@ function render(): void {
 
       <div class="sidebar ${state.isMobileListVisible ? '' : 'hidden-on-mobile'} ${state.isSidebarCollapsed ? 'collapsed' : ''}">
         <div class="sidebar-header">
-          <h2>Candidates</h2>
+          <h2>Skill 候选</h2>
           <div style="display:flex; align-items:center; gap:12px;">
             <button class="nav-btn" id="open-create-btn" style="font-size:24px;">+</button>
             <button class="nav-btn desktop-only" id="close-sidebar-btn" style="font-size:20px; padding:0 4px;">✕</button>
@@ -272,7 +268,7 @@ function render(): void {
           </div>
         ` : ''}
         <div class="skill-list">
-          ${state.skills.map(renderSkillCard).join("") || `<div class="text-muted text-center mt-3">No candidates found.</div>`}
+          ${state.skills.map(renderSkillCard).join("") || `<div class="text-muted text-center mt-3">暂无候选。</div>`}
         </div>
       </div>
 
@@ -280,7 +276,7 @@ function render(): void {
         <div class="desktop-only-flex" style="margin-bottom: 12px; align-items: center;">
           <button class="nav-btn" id="toggle-sidebar-btn" style="font-size:20px; padding: 4px; display: flex; align-items: center; gap: 8px;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            ${state.isSidebarCollapsed ? '<span style="font-size: 15px; font-weight: 600;">Candidates</span>' : ''}
+            ${state.isSidebarCollapsed ? '<span style="font-size: 15px; font-weight: 600;">Skill 候选</span>' : ''}
           </button>
         </div>
         ${state.error ? `
@@ -289,7 +285,7 @@ function render(): void {
             <span>${escapeHtml(state.error)}</span>
           </div>
         ` : ""}
-        ${state.detail ? renderSkillDetail(state.detail) : `<div class="text-muted text-center mt-3">Select a candidate to start.</div>`}
+        ${state.detail ? renderSkillDetail(state.detail) : `<div class="text-muted text-center mt-3">请选择一个 Skill 候选以开始。</div>`}
       </div>
 
       <!-- Create Modal -->
@@ -297,27 +293,27 @@ function render(): void {
         <div class="modal-content">
           <form id="create-skill-form">
             <div class="modal-header">
-              <h3>New Candidate</h3>
+              <h3>新建候选</h3>
               <button type="button" class="modal-close" id="close-create-btn">&times;</button>
             </div>
             <div class="modal-body">
               <div>
-                <label class="text-sm text-muted">Slug</label>
+                <label class="text-sm text-muted">标识符 (Slug)</label>
                 <input name="slug" placeholder="e.g. format-code" pattern="[a-z0-9][a-z0-9_-]{0,63}" required class="mt-2" />
               </div>
               <div>
-                <label class="text-sm text-muted">Title</label>
+                <label class="text-sm text-muted">标题</label>
                 <input name="title" placeholder="e.g. Format Code" required class="mt-2" />
               </div>
               <div>
-                <label class="text-sm text-muted">Category</label>
+                <label class="text-sm text-muted">分类</label>
                 <select name="target_category" class="mt-2">
                   <option>Workflow</option>
                   <option>BestPractice</option>
                   <option>APIGuide</option>
                 </select>
               </div>
-              <button type="submit" class="btn-primary btn-full mt-3">Create Candidate</button>
+              <button type="submit" class="btn-primary btn-full mt-3">创建候选</button>
             </div>
           </form>
         </div>
@@ -346,8 +342,8 @@ function renderAddMaterial(): string {
   return `
     <div class="card">
       <div class="tabs">
-        <button type="button" class="tab ${state.materialTab === 'text' ? 'active' : ''}" data-tab="text">✍️ Text Input</button>
-        <button type="button" class="tab ${state.materialTab === 'file' ? 'active' : ''}" data-tab="file">📁 Audio Upload</button>
+        <button type="button" class="tab ${state.materialTab === 'text' ? 'active' : ''}" data-tab="text">✍️ 文本输入</button>
+        <button type="button" class="tab ${state.materialTab === 'file' ? 'active' : ''}" data-tab="file">📁 上传音频</button>
       </div>
       
       <div>
@@ -355,36 +351,38 @@ function renderAddMaterial(): string {
           <form id="text-form">
             <div class="asr-actions">
               <button type="button" class="btn-record ${state.isRecording ? 'recording' : ''}" id="btn-record">
-                ${state.isRecording ? '🛑 Stop Recording' : '🎙️ Record Audio'}
+                ${state.isRecording ? '🛑 停止录音' : '🎙️ 录音'}
               </button>
               <label class="btn-upload-asr">
-                📁 Upload for ASR
+                📁 上传音频
                 <input type="file" id="asr-file" accept="audio/*,video/*" style="display: none;" />
               </label>
             </div>
             
-            ${state.transcribing ? `<div class="text-sm text-muted mb-2">Transcribing audio, please wait...</div>` : ''}
+            ${state.transcribing ? `<div class="text-sm text-muted mb-2">正在识别语音，请稍候...</div>` : ''}
             
-            <textarea name="text" id="text-material-body" rows="6" placeholder="Transcribed text will appear here. You can also paste or type manually." required>${escapeHtml(state.textDraft)}</textarea>
+            <textarea name="text" id="text-material-body" rows="6" placeholder="识别结果将显示在此处。支持直接输入或粘贴文本。" required>${escapeHtml(state.textDraft)}</textarea>
             
-            <input type="text" name="source_url" placeholder="Source URL (optional)" class="mt-2" />
-            <select name="confidence" class="mt-2">
-              <option value="high">High Confidence</option>
-              <option value="medium" selected>Medium Confidence</option>
-              <option value="low">Low Confidence</option>
-            </select>
-            <button type="submit" class="btn-primary btn-full mt-3">Save Text Material</button>
+            <div class="mt-2" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.5); padding: 4px 4px 4px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.8);">
+              <label class="text-sm text-muted" style="white-space: nowrap; font-weight: 600;">素材权重:</label>
+              <select name="confidence" style="margin: 0; border: none; background: transparent; box-shadow: none; padding-left: 0;">
+                <option value="high">主要参考 (核心内容)</option>
+                <option value="medium" selected>一般参考 (补充说明)</option>
+                <option value="low">仅供参考 (相关性较低)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary btn-full mt-3">保存文本</button>
           </form>
         ` : ''}
 
         ${state.materialTab === 'file' ? `
           <form id="audio-file-form">
-            <p class="text-muted text-sm mb-2 text-center">Upload raw audio to save it as a material and transcribe in the background.</p>
+            <p class="text-muted text-sm mb-2 text-center">上传音频文件，后台将自动进行语音识别。</p>
             <label class="file-drop-area">
               <input type="file" name="file" accept="audio/*,video/*" required />
-              <div class="drop-msg">Select Audio File</div>
+              <div class="drop-msg">选择文件</div>
             </label>
-            <button type="submit" class="btn-primary btn-full mt-2">Upload & Process</button>
+            <button type="submit" class="btn-primary btn-full mt-2">上传音频</button>
           </form>
         ` : ''}
       </div>
@@ -401,75 +399,63 @@ function renderSkillDetail(detail: SkillDetail): string {
       <h1 class="title">${escapeHtml(detail.summary.title)}</h1>
       <div class="meta">
         <span class="badge ${statusClass}">${escapeHtml(detail.summary.status)}</span>
-        <span class="text-sm">${detail.summary.usable_material_count}/${detail.summary.material_count} usable materials</span>
+        <span class="text-sm">${detail.summary.usable_material_count}/${detail.summary.material_count} 可用素材</span>
       </div>
       
       <div class="workflow-bar mt-3">
-        <button type="button" class="btn-workflow" data-action="/api/skills/${escapeHtml(slug)}/draft">Draft</button>
-        <button type="button" class="btn-workflow" data-action="/api/skills/${escapeHtml(slug)}/propose">Propose</button>
-        <button type="button" class="btn-workflow" data-action="/api/skills/${escapeHtml(slug)}/approve">Approve</button>
-        <button type="button" class="btn-workflow" data-action="/api/skills/${escapeHtml(slug)}/promote">Promote</button>
+        <button type="button" class="btn-workflow" data-action="/api/skills/${escapeHtml(slug)}/draft">起草</button>
+        <button type="button" class="btn-workflow" data-action="/api/skills/${escapeHtml(slug)}/promote">发布</button>
+        <button type="button" class="btn-workflow" style="background: var(--blue); color: white;" onclick="location.reload()">刷新状态</button>
       </div>
     </div>
 
-    ${renderAddMaterial()}
+    <div class="area-section input-area">
+      <div class="area-header">1. 提供素材</div>
+      ${renderAddMaterial()}
+    </div>
 
-    <div class="card">
-      <h2 class="card-title">Materials (${detail.materials.length})</h2>
-      <div>
-        ${detail.materials.map(m => `
-          <div class="material-item">
-            <div class="m-type">${escapeHtml(m.type)}</div>
-            <div class="badge ${m.status.toLowerCase()}">${escapeHtml(m.status)}</div>
-            <div class="m-id">${escapeHtml(m.id.substring(0,8))}</div>
-          </div>
-        `).join('') || '<div class="text-muted text-sm text-center">No materials yet.</div>'}
+    <div class="area-section preview-area">
+      <div class="area-header">2. 审核与完善</div>
+      <div class="card">
+        <h2 class="card-title">素材 (${detail.materials.length})</h2>
+        <div>
+          ${detail.materials.map(m => `
+            <div class="material-item">
+              <details class="material-preview-details">
+                <summary class="material-preview-summary">
+                  <div class="m-type">${escapeHtml(m.type)}</div>
+                  <div class="badge ${m.status.toLowerCase()}">${escapeHtml(m.status)}</div>
+                  <div class="m-id">${escapeHtml(m.id.substring(0,8))}</div>
+                </summary>
+                ${m.content ? `<pre class="code-block" style="margin-top: 10px;">${escapeHtml(m.content)}</pre>` : `<div class="text-muted text-sm mt-2 text-center">暂无内容。</div>`}
+              </details>
+            </div>
+          `).join('') || '<div class="text-muted text-sm text-center">暂无素材。</div>'}
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <h2 class="card-title">Skill 状态</h2>
+        <details>
+          <summary>查看 Draft</summary>
+          <pre class="code-block">${escapeHtml(detail.draft || "暂无 Draft。")}</pre>
+        </details>
       </div>
     </div>
 
-    <div class="card">
-      <h2 class="card-title">State</h2>
-      <details>
-        <summary>View Draft</summary>
-        <pre class="code-block">${escapeHtml(detail.draft || "No draft yet.")}</pre>
-      </details>
-      <details class="mt-2">
-        <summary>View Proposal</summary>
-        <pre class="code-block">${escapeHtml(detail.proposal || "No proposal yet.")}</pre>
-      </details>
-    </div>
-
-    <div class="card">
-      <h2 class="card-title">Test Skill</h2>
-      <form id="use-skill">
-        <textarea name="prompt" rows="3" placeholder="Ask the read-only skill agent..." required></textarea>
-        <select name="source" class="mt-2">
-          <option value="promoted">Promoted skill</option>
-          <option value="draft">Draft</option>
-        </select>
-        <button type="submit" class="btn-secondary btn-full mt-2">Launch Agent</button>
-        ${state.useSession ? `<div class="mt-2 text-sm text-muted text-center">Session: ${escapeHtml(state.useSession)}</div>` : ''}
-      </form>
-    </div>
-
-    <div class="card mb-3">
-      <h2 class="card-title">Active Jobs</h2>
-      <div class="jobs-list">
-         ${state.jobs.filter(j => j.slug === slug).map(renderJob).join('') || '<div class="text-muted text-sm text-center">No recent jobs.</div>'}
+    <div class="area-section test-area">
+      <div class="area-header">3. 测试 Skill</div>
+      <div class="card">
+        <form id="use-skill">
+          <textarea name="prompt" rows="3" placeholder="向只读代理提问..." required></textarea>
+          <select name="source" class="mt-2">
+            <option value="promoted">已发布的 Skill</option>
+            <option value="draft">草稿</option>
+          </select>
+          <button type="submit" class="btn-secondary btn-full mt-2">运行 Agent</button>
+          ${state.useSession ? `<div class="mt-2 text-sm text-muted text-center">会话：${escapeHtml(state.useSession)}</div>` : ''}
+        </form>
       </div>
-    </div>
-  `;
-}
-
-function renderJob(job: JobRecord): string {
-  const statusClass = job.status.toLowerCase();
-  return `
-    <div class="job-item ${statusClass}">
-      <div class="job-header">
-        <span>${escapeHtml(job.kind)}</span>
-        <span class="badge ${statusClass}">${escapeHtml(job.status)}</span>
-      </div>
-      <div class="job-message">${escapeHtml(job.message)}</div>
     </div>
   `;
 }
@@ -578,4 +564,3 @@ function attachListeners() {
 }
 
 void load();
-setInterval(() => void load(), 10000);

@@ -176,7 +176,7 @@ class SkillStore:
         for path in sorted(material_root.rglob("*.md")):
             if path.name.startswith("."):
                 continue
-            frontmatter, _ = self._read_doc(path)
+            frontmatter, body = self._read_doc(path)
             if not frontmatter:
                 continue
             materials.append(
@@ -188,6 +188,7 @@ class SkillStore:
                     uploaded_at=str(frontmatter.get("uploaded_at") or "") or None,
                     source_file=frontmatter.get("source_file"),
                     asr=frontmatter.get("asr") if isinstance(frontmatter.get("asr"), dict) else {},
+                    content=body.strip(),
                 )
             )
         return materials
@@ -336,7 +337,7 @@ class SkillStore:
         self.set_index_status(slug, "approved")
 
     def _material_from_path(self, path: Path) -> MaterialSummary:
-        frontmatter, _ = self._read_doc(path)
+        frontmatter, body = self._read_doc(path)
         return MaterialSummary(
             id=str(frontmatter.get("id") or path.stem),
             type=str(frontmatter.get("type") or path.parent.name),
@@ -345,4 +346,5 @@ class SkillStore:
             uploaded_at=str(frontmatter.get("uploaded_at") or "") or None,
             source_file=frontmatter.get("source_file"),
             asr=frontmatter.get("asr") if isinstance(frontmatter.get("asr"), dict) else {},
+            content=body.strip(),
         )

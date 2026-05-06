@@ -17,9 +17,6 @@ def promote_skill(store: SkillStore, slug: str) -> Path:
     slug = validate_slug(slug)
     detail = store.get_skill(slug)
     skill_dir = store.context_root / slug
-    proposal_doc = parse_markdown((skill_dir / "proposal.md").read_text(encoding="utf-8"))
-    if proposal_doc.frontmatter.get("decision") != "approved":
-        raise StoreError("Proposal must be approved before promotion.")
 
     draft_path = skill_dir / "draft.md"
     draft_doc = parse_markdown(draft_path.read_text(encoding="utf-8"))

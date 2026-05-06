@@ -26,6 +26,7 @@ class MaterialSummary(BaseModel):
     uploaded_at: str | None = None
     source_file: str | None = None
     asr: dict[str, Any] = Field(default_factory=dict)
+    content: str = ""
 
 
 class SkillDetail(BaseModel):

@@ -198,7 +198,33 @@ h1, h2, h3, p { margin: 0; }
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 32px;
+}
+
+.area-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+.area-section::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -20px; right: -20px; bottom: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%);
+  border-radius: 20px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.area-header {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-left: 4px;
 }
 
 @media (max-width: 768px) {
@@ -466,31 +492,25 @@ select {
 .text-center { text-align: center; }
 
 .material-item {
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  gap: 16px;
-  align-items: center;
   padding: 14px 0;
   border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 .material-item:last-child { border-bottom: none; }
+.material-preview-details {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+.material-preview-summary {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 16px;
+  align-items: center;
+  list-style: none; /* Hide default arrow in some browsers */
+}
+.material-preview-summary::-webkit-details-marker { display: none; }
 .material-item .m-type { font-weight: 600; text-transform: capitalize; }
 .material-item .m-id { text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; color: var(--text-muted); }
-
-.jobs-list { display: flex; flex-direction: column; gap: 12px; }
-.job-item {
-  padding: 16px;
-  border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.6);
-  border: 1px solid var(--glass-border);
-  border-left: 5px solid rgba(0,0,0,0.1);
-  box-shadow: var(--glass-shadow-sm);
-}
-.job-item.running { border-left-color: var(--blue); }
-.job-item.completed { border-left-color: var(--success); }
-.job-item.failed { border-left-color: var(--danger); background: rgba(255, 59, 48, 0.05); }
-.job-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; }
-.job-message { font-size: 14px; color: var(--text-muted); word-break: break-word; line-height: 1.4; }
 
 .code-block {
   background: rgba(28, 28, 30, 0.85);

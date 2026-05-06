@@ -170,29 +170,6 @@ def draft(slug: str):
     return job_runner.enqueue(kind="draft", slug=slug, message="Draft requested", task=task)
 
 
-@app.post("/api/skills/{slug}/propose", dependencies=[Depends(require_admin)])
-def propose(slug: str):
-    def task(job_id: str):
-        session_id = opencode.create_session(f"Propose skill: {slug}")
-        response = opencode.send_message(
-            session_id,
-            propose_prompt(slug, settings.context_root, settings.rules_root),
-            agent="skill-builder",
-        )
-        return {"session_id": session_id, "response": response}
-
-    return job_runner.enqueue(kind="propose", slug=slug, message="Proposal requested", task=task)
-
-
-@app.post("/api/skills/{slug}/approve", dependencies=[Depends(require_admin)])
-def approve(slug: str):
-    try:
-        store.approve(slug)
-        return store.get_skill(slug).summary
-    except StoreError as exc:
-        raise handle_store_error(exc) from exc
-
-
 @app.post("/api/skills/{slug}/promote", dependencies=[Depends(require_admin)])
 def promote(slug: str):
     try:
