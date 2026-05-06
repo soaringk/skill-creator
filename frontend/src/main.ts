@@ -72,6 +72,7 @@ const state = {
   isMobileListVisible: true,
   isSidebarCollapsed: false,
   publishToken: "",
+  detailsOpen: {} as Record<string, boolean>,
 };
 
 let recordingSocket: WebSocket | null = null;
@@ -621,7 +622,7 @@ function renderSkillDetail(detail: SkillDetail): string {
             const displayTitle = title.length > 40 ? title.substring(0, 40) + '...' : title;
             return `
             <div class="material-item">
-              <details>
+              <details ${detailsAttributes(`material:${slug}:${m.id}`)}>
                 <summary class="material-preview-summary">
                   <div class="m-type" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(title)}">${escapeHtml(displayTitle)}</div>
                   <div class="m-id">${escapeHtml(m.id.substring(0,8))}</div>
@@ -677,30 +678,35 @@ function renderSkillStatus(detail: SkillDetail): string {
     <div class="card mt-3">
       <h2 class="card-title">Skill 状态</h2>
       ${draft.publishable || draft.review ? `
-        <details open>
+        <details ${detailsAttributes(`status:${detail.summary.slug}:publishable`, true)}>
           <summary>可发布内容</summary>
           <pre class="draft-block">${escapeHtml(draft.publishable || "暂无可发布内容。")}</pre>
         </details>
         ${draft.review ? `
-        <details class="mt-2">
+        <details class="mt-2" ${detailsAttributes(`status:${detail.summary.slug}:review`)}>
           <summary>评审意见</summary>
           <pre class="draft-block">${escapeHtml(draft.review)}</pre>
         </details>
         ` : ''}
       ` : `
-        <details open>
+        <details ${detailsAttributes(`status:${detail.summary.slug}:raw`, true)}>
           <summary>草稿</summary>
           <pre class="draft-block">${escapeHtml(draft.raw || "暂无草稿。")}</pre>
         </details>
       `}
       ${detail.promoted ? `
-      <details class="mt-2">
+      <details class="mt-2" ${detailsAttributes(`status:${detail.summary.slug}:promoted`)}>
         <summary>已发布版本</summary>
         <pre class="draft-block">${escapeHtml(detail.promoted)}</pre>
       </details>
       ` : ''}
     </div>
   `;
+}
+
+function detailsAttributes(key: string, defaultOpen = false): string {
+  const open = state.detailsOpen[key] ?? defaultOpen;
+  return `data-details-key="${escapeHtml(key)}"${open ? " open" : ""}`;
 }
 
 function renderAgentOutput(): string {
@@ -863,6 +869,13 @@ function attachListeners() {
 
   document.querySelector<HTMLInputElement>('#publish-token')?.addEventListener('input', (e) => {
     state.publishToken = (e.target as HTMLInputElement).value;
+  });
+
+  document.querySelectorAll<HTMLDetailsElement>('details[data-details-key]').forEach(el => {
+    el.addEventListener('toggle', () => {
+      const key = el.dataset.detailsKey;
+      if (key) state.detailsOpen[key] = el.open;
+    });
   });
 
   // Other Actions
