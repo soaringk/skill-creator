@@ -6,11 +6,18 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 UV_CACHE_DIR=/tmp/uv-cache uv sync --extra dev
 
+AUTH_FILE=/etc/nginx/.htpasswd-skill-creator
+AUTH_USER=skill-creator
+AUTH_PASSWORD="$(openssl rand -hex 18)"
+AUTH_HASH="$(printf '%s\n' "$AUTH_PASSWORD" | openssl passwd -apr1 -stdin)"
+
+printf '%s:%s\n' "$AUTH_USER" "$AUTH_HASH" | sudo tee "$AUTH_FILE" >/dev/null
+sudo chmod 644 "$AUTH_FILE"
+
 sudo tee /etc/nginx/snippets/skill-creator-api.conf >/dev/null <<'EOF'
 location ^~ /tools/skill-creator/api/ {
-    allow 127.0.0.1;
-    allow ::1;
-    deny all;
+    auth_basic "Skill Creator";
+    auth_basic_user_file /etc/nginx/.htpasswd-skill-creator;
 
     client_max_body_size 100m;
     proxy_pass http://127.0.0.1:8010/api/;
@@ -30,6 +37,9 @@ location ^~ /tools/skill-creator/api/ {
 }
 
 location ^~ /tools/skill-creator/ {
+    auth_basic "Skill Creator";
+    auth_basic_user_file /etc/nginx/.htpasswd-skill-creator;
+
     proxy_pass http://127.0.0.1:5173;
     proxy_http_version 1.1;
 
@@ -58,4 +68,7 @@ sudo systemctl reload nginx
 "$ROOT/scripts/start-backend.sh"
 "$ROOT/scripts/start-frontend.sh"
 
-echo "Skill Creator frontend is ready for https://kefan.life/tools/skill-creator/; API proxy is localhost-only."
+echo "Skill Creator is ready for https://kefan.life/tools/skill-creator/ with nginx Basic Auth."
+echo "Basic Auth username: $AUTH_USER"
+echo "Basic Auth password: $AUTH_PASSWORD"
+echo "This password is generated on every deployment."

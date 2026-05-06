@@ -109,14 +109,15 @@ cd /home/cody/skill-creator
 
 The deploy script:
 
-- adds a localhost-only nginx API proxy for `/tools/skill-creator/api/*`
-- adds the nginx frontend proxy for `/tools/skill-creator/*`
+- generates a fresh shared nginx Basic Auth password and writes `/etc/nginx/.htpasswd-skill-creator`
+- adds a Basic Auth protected nginx API proxy for `/tools/skill-creator/api/*`
+- adds a Basic Auth protected nginx frontend proxy for `/tools/skill-creator/*`
 - starts the backend manually on `127.0.0.1:8010`
 - builds and starts the frontend static server manually on `127.0.0.1:5173`
 
-The API proxy is intentionally not public. The service can write local candidate files
-and run ASR/OpenCode jobs, so exposing it to the internet requires a real auth/session
-model first.
+The Basic Auth username is `skill-creator`. The password is printed by the deploy
+script and changes on every deployment, so share the latest printed password with
+the people using the toy app.
 
 Backend process controls:
 
@@ -131,9 +132,8 @@ Nginx shape:
 
 ```nginx
 location ^~ /tools/skill-creator/api/ {
-    allow 127.0.0.1;
-    allow ::1;
-    deny all;
+    auth_basic "Skill Creator";
+    auth_basic_user_file /etc/nginx/.htpasswd-skill-creator;
 
     proxy_pass http://127.0.0.1:8010/api/;
     proxy_http_version 1.1;
@@ -144,6 +144,9 @@ location ^~ /tools/skill-creator/api/ {
 }
 
 location ^~ /tools/skill-creator/ {
+    auth_basic "Skill Creator";
+    auth_basic_user_file /etc/nginx/.htpasswd-skill-creator;
+
     proxy_pass http://127.0.0.1:5173;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;

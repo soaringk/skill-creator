@@ -484,7 +484,7 @@ function render(options: { preserveScroll?: boolean } = {}): void {
           </div>
         </div>
         <div class="skill-list">
-          ${state.skills.map(renderSkillCard).join("") || `<div class="text-muted text-center mt-3">暂无 Skill。</div>`}
+          ${state.skills.map(renderSkillCard).join("") || `<div class="text-muted text-center mt-3">暂无 Skill</div>`}
         </div>
       </div>
 
