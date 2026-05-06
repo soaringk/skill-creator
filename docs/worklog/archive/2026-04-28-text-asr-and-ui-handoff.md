@@ -1,6 +1,6 @@
 # Text ASR And UI Handoff
 
-- Status: active
+- Status: completed
 - Opened: 2026-04-28
 - Repo: `skill-creator`
 
@@ -29,11 +29,15 @@
 - Implemented: Added `POST /api/asr/text-draft` for temporary ASR transcription that returns text without saving candidate state.
 - Implemented: Added frontend Text Material controls to choose an audio file, transcribe it into the textarea, edit it, then save normally.
 - Documented: Filled durable architecture, constraints, decisions, lessons, and risks for UI/UX handoff.
+- Investigated: Public deployment at `/tools/skill-creator/` returned `Unexpected token '<'` because the latest frontend change made API requests use root `/api/...`, while nginx only proxies `/tools/skill-creator/api/...`; root `/api/...` returns the main blog HTML.
+- Implemented: Restored subpath-aware API URLs and Vite dev/preview proxy rewriting for the configured `VITE_BASE_PATH`.
+- Implemented: Updated public deploy to restart managed frontend/backend processes so rebuilt assets and Vite config changes take effect instead of exiting early on existing PID files.
+- Validated: `npm run build`; fresh Vite preview on port 5174 proxied `/tools/skill-creator/api/skills` to the backend; live root `/api/skills` returned HTML while live subpath API returned JSON.
 
 ## Outcome / Handoff
 
-- Result:
-- Validation:
+- Result: Text ASR draft flow is implemented and documented; public subpath deployment now uses base-path-aware API URLs and deploy restarts managed processes so rebuilt frontend assets take effect.
+- Validation: Backend/frontend checks were run for the text ASR work; public deployment fix was validated with `npm run build`, shell syntax checks, Vite preview subpath API proxy check, and live URL checks showing root `/api/...` returns HTML while `/tools/skill-creator/api/...` returns JSON.
 - Follow-up: UI/UX redesign should treat the existing frontend as a functional prototype, not a design baseline.
 
 ## Promotion Candidates
@@ -55,6 +59,7 @@
 ### Lessons
 
 - A technically complete dashboard can still be poor UX if it exposes pipeline mechanics as primary actions instead of guiding normal user intent.
+- When `VITE_BASE_PATH` is `/tools/skill-creator/`, frontend API requests must target `/tools/skill-creator/api/...`; root `/api/...` belongs to the main site and can return HTML.
 
 ### Risks
 

@@ -66,8 +66,6 @@ const app = root;
 const apiBase = import.meta.env.BASE_URL;
 
 function apiUrl(path: string): string {
-  // API paths stay absolute for Vite proxy to handle
-  if (path.startsWith("/api")) return path;
   const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
   return `${apiBase}${normalizedPath}`;
 }

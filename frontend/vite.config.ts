@@ -12,11 +12,15 @@ export default defineConfig(({ mode }) => {
   const rootEnv = loadEnv(mode, path.resolve(process.cwd(), ".."), "");
   const env = { ...rootEnv, ...frontendEnv, ...process.env };
   const base = normalizeBasePath(env.VITE_BASE_PATH);
+  const basePrefix = base === "/" ? "" : base.slice(0, -1);
+  const apiProxyPath = `${basePrefix}/api`;
 
   const proxyConfig = {
-    "/api": {
+    [apiProxyPath]: {
       target: "http://127.0.0.1:8010",
-      changeOrigin: true
+      changeOrigin: true,
+      rewrite: (requestPath: string) =>
+        basePrefix ? requestPath.slice(basePrefix.length) : requestPath
     }
   };
 

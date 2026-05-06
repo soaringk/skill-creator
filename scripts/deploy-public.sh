@@ -47,6 +47,8 @@ fi
 sudo nginx -t
 sudo systemctl reload nginx
 
+"$ROOT/scripts/stop-frontend.sh"
+"$ROOT/scripts/stop-backend.sh"
 "$ROOT/scripts/start-backend.sh"
 "$ROOT/scripts/start-frontend.sh"
 
