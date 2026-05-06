@@ -18,16 +18,16 @@ def nginx_block(path: str) -> str:
     return match.group("body")
 
 
-def test_public_locations_use_same_basic_auth_file() -> None:
+def test_public_locations_do_not_require_basic_auth() -> None:
     for path in ("/tools/skill-creator/api/", "/tools/skill-creator/"):
         block = nginx_block(path)
-        assert 'auth_basic "Skill Creator";' in block
-        assert "auth_basic_user_file /etc/nginx/.htpasswd-skill-creator;" in block
+        assert "auth_basic" not in block
+        assert "auth_basic_user_file" not in block
 
 
-def test_public_auth_password_is_generated_by_deploy_script() -> None:
-    assert "AUTH_USER=skill-creator" in SCRIPT
-    assert 'AUTH_PASSWORD="$(openssl rand -hex 18)"' in SCRIPT
+def test_public_deploy_does_not_manage_auth_credentials() -> None:
+    assert "htpasswd" not in SCRIPT
+    assert "openssl rand" not in SCRIPT
     assert "SKILL_CREATOR_PUBLIC_AUTH_USER" not in SCRIPT
     assert "SKILL_CREATOR_PUBLIC_AUTH_PASSWORD" not in SCRIPT
 
