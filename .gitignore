@@ -5,6 +5,8 @@ __pycache__/
 .ruff_cache/
 *.pyc
 data/jobs.jsonl
+data/skill-creator*.log
+data/skill-creator*.pid
 dist/
 frontend/dist/
 frontend/node_modules/
