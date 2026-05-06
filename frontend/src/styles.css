@@ -270,7 +270,6 @@ h1, h2, h3, p { margin: 0; }
   border: 1px solid rgba(255,255,255,0.4);
 }
 .badge.promoted { background: rgba(52, 199, 89, 0.15); color: #248a3d; border-color: rgba(52, 199, 89, 0.2); }
-.badge.proposed { background: rgba(0, 122, 255, 0.15); color: #0056b3; border-color: rgba(0, 122, 255, 0.2); }
 .badge.usable { background: rgba(52, 199, 89, 0.15); color: #248a3d; }
 
 input, select, textarea {
@@ -330,6 +329,76 @@ select {
 }
 .btn-secondary:hover { background: rgba(255, 255, 255, 0.9); }
 .btn-full { width: 100%; display: block; }
+
+.error-banner,
+.job-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  box-shadow: var(--glass-shadow-sm), inset 0 1px 0 rgba(255,255,255,0.75);
+}
+
+.error-banner {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 59, 48, 0.24);
+  color: #9f1d16;
+}
+.error-banner svg {
+  flex: none;
+  color: var(--danger);
+}
+
+.job-banner {
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(0, 122, 255, 0.24);
+}
+.job-banner.failed {
+  border-color: rgba(255, 59, 48, 0.24);
+}
+.job-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 0 5px rgba(0, 122, 255, 0.12), 0 0 18px rgba(0, 122, 255, 0.35);
+}
+.job-banner.failed .job-dot {
+  background: var(--danger);
+  box-shadow: 0 0 0 5px rgba(255, 59, 48, 0.12), 0 0 18px rgba(255, 59, 48, 0.35);
+}
+.job-copy {
+  min-width: 0;
+  text-align: left;
+}
+.job-title {
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.job-message {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+.job-banner.failed .job-message {
+  color: #9f1d16;
+}
+.publish-section { text-align: center; }
+.publish-button {
+  background: linear-gradient(135deg, #34c759, #28a745);
+  box-shadow: 0 4px 14px rgba(52, 199, 89, 0.3);
+}
+.publish-button:hover {
+  box-shadow: 0 6px 20px rgba(52, 199, 89, 0.4);
+}
 
 /* Recording Button Specific */
 @keyframes pulse-ring {

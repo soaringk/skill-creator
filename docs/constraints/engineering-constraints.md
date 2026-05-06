@@ -6,6 +6,7 @@
 - Treat candidate slugs and filenames as untrusted input; reject path traversal and keep writes inside configured roots.
 - Require an admin token for mutating API routes. Do not silently allow write operations when the token is unset.
 - Maintain the configured candidate folder model, allowing for a standalone deployment defaulting to local `data/`.
+- Treat `draft.md` review sections as review metadata. Runtime use and promotion should operate on the `Publishable Skill` section when present.
 
 ## Compatibility
 

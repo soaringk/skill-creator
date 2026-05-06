@@ -11,7 +11,7 @@ from .config import load_settings
 from .jobs import JobRunner, JobStore
 from .models import CreateSkillRequest, JobRecord, TextMaterialRequest, UseSkillRequest
 from .opencode import OpenCodeClient, OpenCodeConfig, draft_prompt
-from .promotion import promote_skill
+from .promotion import promote_skill, publishable_body
 from .store import SkillStore, StoreError
 
 settings = load_settings()
@@ -164,7 +164,7 @@ def use_skill(slug: str, request: UseSkillRequest):
     except StoreError as exc:
         raise handle_store_error(exc) from exc
 
-    source_text = detail.draft if request.source == "draft" else _read_promoted_skill(slug)
+    source_text = publishable_body(detail.draft) if request.source == "draft" else _read_promoted_skill(slug)
     if not source_text.strip():
         raise HTTPException(status_code=400, detail="No skill text is available for use.")
 

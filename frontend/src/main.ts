@@ -38,10 +38,12 @@ type JobRecord = {
   created_at: string;
   updated_at: string;
   message: string;
+  result?: Record<string, unknown>;
 };
 
 const state = {
   skills: [] as SkillSummary[],
+  jobs: [] as JobRecord[],
   selectedSlug: null as string | null,
   detail: null as SkillDetail | null,
   error: "",
@@ -51,13 +53,14 @@ const state = {
   textDraft: "",
   isModalOpen: false,
   isMobileListVisible: true,
-  settingsOpen: false,
   isSidebarCollapsed: false,
+  publishToken: "",
 };
 
 // Global recording references
 let mediaRecorder: MediaRecorder | null = null;
 let audioChunks: BlobPart[] = [];
+let jobRefreshTimer: number | null = null;
 
 const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("Missing app root");
@@ -73,24 +76,33 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
 
-  if (path.endsWith('/promote')) {
-    const token = prompt("请输入 Admin Token 以发布 Skill:");
-    if (!token) throw new Error("发布需要 Admin Token");
-    headers.set("X-Admin-Token", token.trim());
-  }
-
   const response = await fetch(apiUrl(path), { ...options, headers });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
+    throw new Error(errorMessage(text, response.status));
   }
   return (await response.json()) as T;
 }
 
+function errorMessage(body: string, status: number): string {
+  if (!body) return `Request failed: ${status}`;
+  try {
+    const parsed = JSON.parse(body) as { detail?: unknown };
+    if (typeof parsed.detail === "string") return parsed.detail;
+  } catch {
+    // Keep the original response body.
+  }
+  return body;
+}
+
 async function load(): Promise<void> {
   try {
-    const skills = await api<SkillSummary[]>("/api/skills");
+    const [skills, jobs] = await Promise.all([
+      api<SkillSummary[]>("/api/skills"),
+      api<JobRecord[]>("/api/jobs"),
+    ]);
     state.skills = skills;
+    state.jobs = jobs;
 
     if (!state.selectedSlug && skills.length > 0) {
       state.selectedSlug = skills[0].slug;
@@ -104,6 +116,19 @@ async function load(): Promise<void> {
     state.error = error instanceof Error ? error.message : String(error);
   }
   render();
+  scheduleJobRefresh();
+}
+
+function scheduleJobRefresh(): void {
+  if (jobRefreshTimer !== null) {
+    window.clearTimeout(jobRefreshTimer);
+    jobRefreshTimer = null;
+  }
+  if (!state.jobs.some(job => job.status === "queued" || job.status === "running")) return;
+  jobRefreshTimer = window.setTimeout(() => {
+    jobRefreshTimer = null;
+    void load();
+  }, 2000);
 }
 
 async function selectSkill(slug: string): Promise<void> {
@@ -227,8 +252,16 @@ async function transcribeOfflineFile(file: File): Promise<void> {
   }
 }
 
-async function action(path: string): Promise<void> {
-  await api<unknown>(path, { method: "POST", body: "{}" });
+async function publishSkill(): Promise<void> {
+  if (!state.selectedSlug) return;
+  const token = state.publishToken.trim();
+  if (!token) throw new Error("发布需要 Admin Token。");
+  await api<unknown>(`/api/skills/${state.selectedSlug}/promote`, {
+    method: "POST",
+    body: "{}",
+    headers: { "X-Admin-Token": token },
+  });
+  state.publishToken = "";
   await load();
 }
 
@@ -382,6 +415,8 @@ function renderSkillDetail(detail: SkillDetail): string {
       </div>
     </div>
 
+    ${renderJobNotice(slug)}
+
     <div class="area-section input-area">
       ${renderAddMaterial()}
     </div>
@@ -441,15 +476,55 @@ function renderSkillDetail(detail: SkillDetail): string {
 
         <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 24px 0;" />
 
-        <div class="publish-section" style="text-align: center;">
-            <p class="text-muted text-sm mb-3">测试满意后，可将当前版本发布生效。</p>
-            <button type="button" class="btn-primary btn-full" style="background: linear-gradient(135deg, #34c759, #28a745); box-shadow: 0 4px 14px rgba(52, 199, 89, 0.3);" data-action="/api/skills/${escapeHtml(slug)}/promote">
-              🚀 发布 Skill
-            </button>
+        <div class="publish-section">
+          <p class="text-muted text-sm mb-2">发布需要 Admin Token。</p>
+          <input
+            id="publish-token"
+            type="password"
+            autocomplete="off"
+            placeholder="Admin Token"
+            value="${escapeHtml(state.publishToken)}"
+            class="mb-2"
+          />
+          <button type="button" class="btn-primary btn-full publish-button" id="publish-skill">
+            发布 Skill
+          </button>
         </div>
       </div>
     </div>
   `;
+}
+
+function renderJobNotice(slug: string): string {
+  const job = latestDraftJob(slug);
+  if (!job || job.status === "completed") return "";
+  if (job.status === "failed") {
+    return `
+      <div class="job-banner failed">
+        <span class="job-dot"></span>
+        <div class="job-copy">
+          <div class="job-title">草稿生成失败</div>
+          <div class="job-message">${escapeHtml(job.message || "Unknown error")}</div>
+        </div>
+      </div>
+    `;
+  }
+  const title = job.status === "queued" ? "排队中" : "正在生成草稿";
+  return `
+    <div class="job-banner">
+      <span class="job-dot"></span>
+      <div class="job-copy">
+        <div class="job-title">${title}</div>
+        <div class="job-message">完成后会自动刷新。</div>
+      </div>
+    </div>
+  `;
+}
+
+function latestDraftJob(slug: string): JobRecord | undefined {
+  return state.jobs
+    .filter(item => item.slug === slug && item.kind === "draft")
+    .sort((left, right) => right.created_at.localeCompare(left.created_at))[0];
 }
 
 function escapeHtml(value: string): string {
@@ -495,22 +570,24 @@ function attachListeners() {
     state.textDraft = (e.target as HTMLTextAreaElement).value;
   });
 
+  document.querySelector<HTMLInputElement>('#publish-token')?.addEventListener('input', (e) => {
+    state.publishToken = (e.target as HTMLInputElement).value;
+  });
+
   // Other Actions
   document.querySelector<HTMLFormElement>('#create-skill-form')?.addEventListener('submit', createSkill);
   document.querySelector<HTMLFormElement>('#use-skill')?.addEventListener('submit', useSkill);
+  document.querySelector<HTMLButtonElement>('#publish-skill')?.addEventListener('click', () => {
+    publishSkill().catch((error) => {
+      state.error = error instanceof Error ? error.message : String(error);
+      render();
+    });
+  });
 
   document.querySelectorAll<HTMLDivElement>('[data-skill]').forEach(el => {
     el.addEventListener('click', () => {
       const slug = (el as HTMLElement).dataset.skill;
       if (slug) selectSkill(slug);
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      const actionUrl = (el as HTMLElement).dataset.action;
-      if (actionUrl) action(actionUrl);
     });
   });
 

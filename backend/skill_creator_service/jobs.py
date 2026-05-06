@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from collections.abc import Callable
 from datetime import datetime
@@ -9,6 +10,8 @@ from typing import Any
 from uuid import uuid4
 
 from .models import JobRecord
+
+logger = logging.getLogger(__name__)
 
 
 def now_iso() -> str:
@@ -104,6 +107,7 @@ class JobRunner:
                 result = task(record.id) or {}
                 self.store.update(record.id, status="completed", message="completed", result=result)
             except Exception as exc:  # noqa: BLE001 - persist background failure for the UI
+                logger.exception("Background job %s failed", record.id)
                 self.store.update(record.id, status="failed", message=str(exc), result={})
 
         thread = threading.Thread(target=run, name=f"skill-creator-{record.kind}", daemon=True)

@@ -3,13 +3,14 @@
 ## Purpose
 
 - Repository: `skill-creator`
-- Summary: Local web service for continuously collecting text/audio materials, drafting candidate skills, and promoting approved skills into a configured rules repository.
+- Summary: Local web service for collecting text/audio materials, drafting candidate skills, and publishing them to a configured rules repository.
 
 ## Major Areas
 
-- Backend API: `backend/skill_creator_service/` is a FastAPI service that owns privileged operations: file writes, DashScope ASR, OpenCode calls, approval, and promotion.
+- Backend API: `backend/skill_creator_service/` is a FastAPI service that owns privileged operations: file writes, DashScope ASR, OpenCode calls, admin-token checks, and promotion.
 - Frontend: `frontend/` is a Vite TypeScript app. It is currently a functional operator dashboard, not a polished normal-user product experience.
 - OpenCode config: `.opencode/agents/` defines constrained agents. `skill-use` is read-only; `skill-builder` is backend-controlled for draft generation.
+- Skill drafts separate publishable runtime content from user-visible draft review metadata. Promotion writes only the publishable content and records the same content in `published.md`.
 - Documentation: `docs/` uses doc-flow durable docs plus active worklogs for handoff and future agent continuity.
 
 ## Boundaries
