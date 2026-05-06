@@ -283,37 +283,6 @@ h1, h2, h3, p { margin: 0; }
 .badge.proposed { background: rgba(0, 122, 255, 0.15); color: #0056b3; border-color: rgba(0, 122, 255, 0.2); }
 .badge.usable { background: rgba(52, 199, 89, 0.15); color: #248a3d; }
 
-.workflow-bar {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 8px 0 12px 0;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.workflow-bar::-webkit-scrollbar { display: none; }
-
-.btn-workflow {
-  flex: 0 0 auto;
-  padding: 12px 24px;
-  font-size: 15px;
-  font-weight: 600;
-  border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(10px);
-  border-radius: 30px;
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: var(--glass-shadow-sm);
-}
-.btn-workflow:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-.btn-workflow:active { transform: scale(0.97); }
-
 .tabs {
   display: flex;
   background: rgba(0, 0, 0, 0.04);

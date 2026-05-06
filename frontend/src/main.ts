@@ -392,12 +392,6 @@ function renderSkillDetail(detail: SkillDetail): string {
         <span class="badge ${statusClass}">${escapeHtml(detail.summary.status)}</span>
         <span class="text-sm">${detail.summary.usable_material_count}/${detail.summary.material_count} 可用素材</span>
       </div>
-      
-      <div class="workflow-bar mt-3">
-        <button type="button" class="btn-workflow" data-action="/api/skills/${escapeHtml(slug)}/draft">起草</button>
-        <button type="button" class="btn-workflow" data-action="/api/skills/${escapeHtml(slug)}/promote">发布</button>
-        <button type="button" class="btn-workflow" style="background: var(--blue); color: white;" onclick="location.reload()">刷新状态</button>
-      </div>
     </div>
 
     <div class="area-section input-area">
@@ -435,17 +429,26 @@ function renderSkillDetail(detail: SkillDetail): string {
     </div>
 
     <div class="area-section test-area">
-      <div class="area-header">3. 测试 Skill</div>
+      <div class="area-header">3. 测试与发布</div>
       <div class="card">
         <form id="use-skill">
           <textarea name="prompt" rows="3" placeholder="向只读 Agent 提问..." required></textarea>
           <select name="source" class="mt-2">
+            <option value="draft">当前草稿</option>
             <option value="promoted">已发布的 Skill</option>
-            <option value="draft">草稿</option>
           </select>
           <button type="submit" class="btn-secondary btn-full mt-2">运行 Agent</button>
           ${state.useSession ? `<div class="mt-2 text-sm text-muted text-center">会话：${escapeHtml(state.useSession)}</div>` : ''}
         </form>
+        
+        <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 24px 0;" />
+        
+        <div class="publish-section" style="text-align: center;">
+            <p class="text-muted text-sm mb-3">测试满意后，可将当前版本发布生效。</p>
+            <button type="button" class="btn-primary btn-full" style="background: linear-gradient(135deg, #34c759, #28a745); box-shadow: 0 4px 14px rgba(52, 199, 89, 0.3);" data-action="/api/skills/${escapeHtml(slug)}/promote">
+              🚀 发布 Skill
+            </button>
+        </div>
       </div>
     </div>
   `;
