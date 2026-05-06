@@ -391,7 +391,7 @@ function renderSkillDetail(detail: SkillDetail): string {
         <h2 class="card-title">素材 (${detail.materials.length})</h2>
         <div>
           ${detail.materials.map(m => {
-            const firstLine = m.content ? m.content.split('\\n').find(l => l.trim().length > 0)?.replace(/^#+\\s*/, '').trim() : '';
+            const firstLine = m.content ? m.content.split(/\r?\n/).find(l => l.trim().length > 0)?.replace(/^#+\s*/, '').trim() : '';
             const title = firstLine || m.type;
             const displayTitle = title.length > 40 ? title.substring(0, 40) + '...' : title;
             return `
