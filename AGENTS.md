@@ -4,7 +4,6 @@ This project is actively developing. Backward compatibility is not required yet;
 
 ## Architecture
 
-- Keep `~/context-infrastructure/contexts/skill_creator` as the canonical skill-candidate data store unless a concrete security issue requires changing it.
 - Keep this repository focused on service code, UI code, runtime job state, and OpenCode agent configuration.
 - Use TypeScript for frontend work when practical. Use Python for backend work when it materially reduces integration risk, especially for DashScope ASR and local file workflows.
 - Browser code must not write files directly, receive filesystem credentials, or call OpenCode directly. Route privileged actions through the backend API.

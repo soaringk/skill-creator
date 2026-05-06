@@ -3,8 +3,6 @@ slug:
 title:
 status: collecting
 target_category: Workflow
-promotion_intent: auto_propose
-requires_user_confirmation: true
 rules_target:
 created_at:
 updated_at:

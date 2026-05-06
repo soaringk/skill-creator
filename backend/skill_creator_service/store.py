@@ -157,11 +157,19 @@ class SkillStore:
             raise StoreError(f"Missing index.md for skill candidate: {slug}")
         _, index_body = self._read_doc(skill_dir / "index.md")
         _, draft = self._read_doc(skill_dir / "draft.md")
+        
+        # Prefer published.md for promoted status tracking
+        published_fm, promoted_body = self._read_doc(skill_dir / "published.md")
+        rules_target = published_fm.get("rules_target") or summary.rules_target
+        
         promoted = None
-        if summary.rules_target:
-            target_path = Path(summary.rules_target)
+        if rules_target:
+            target_path = Path(rules_target)
             if target_path.exists():
                 promoted = target_path.read_text(encoding="utf-8")
+            elif promoted_body.strip():
+                # Fallback to local snapshot if target is missing but snapshot exists
+                promoted = promoted_body
 
         return SkillDetail(
             summary=summary,

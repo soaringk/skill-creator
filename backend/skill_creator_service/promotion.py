@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .frontmatter import parse_markdown
-from .store import SkillStore, StoreError, validate_slug
+from .frontmatter import dump_markdown, parse_markdown
+from .store import SkillStore, StoreError, utc_now, validate_slug
 
 
 def _target_name(category: str | None, slug: str) -> str:
@@ -36,6 +36,14 @@ def promote_skill(store: SkillStore, slug: str) -> Path:
         entry = f"- [{title}](./{target.name}) - Promoted from skill creator candidate `{slug}`\n"
         if target.name not in index_text:
             index_path.write_text(index_text.rstrip() + "\n" + entry, encoding="utf-8")
+
+    published_path = skill_dir / "published.md"
+    self_frontmatter = {
+        "status": "promoted",
+        "rules_target": str(target),
+        "promoted_at": utc_now()
+    }
+    published_path.write_text(dump_markdown(self_frontmatter, draft_doc.body), encoding="utf-8")
 
     store.set_index_status(slug, "promoted", rules_target=str(target))
     return target
