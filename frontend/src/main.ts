@@ -469,23 +469,22 @@ function render(options: { preserveScroll?: boolean } = {}): void {
   const previousScrollTop = options.preserveScroll ? mainContent?.scrollTop : undefined;
   app.innerHTML = `
     <div class="app-layout">
+      ${!state.isMobileListVisible ? `
       <nav class="mobile-nav">
-        ${!state.isMobileListVisible ?
-          `<button class="nav-btn" id="back-btn">← Skill 候选</button>` :
-          `<div style="font-size:18px;">Skill Creator</div>`
-        }
+        <button class="nav-btn" id="back-btn">← Skill 创作列表</button>
       </nav>
+      ` : ""}
 
       <div class="sidebar ${state.isMobileListVisible ? '' : 'hidden-on-mobile'} ${state.isSidebarCollapsed ? 'collapsed' : ''}">
         <div class="sidebar-header">
-          <h2>Skill 候选</h2>
+          <h2>Skill 创作列表</h2>
           <div style="display:flex; align-items:center; gap:12px;">
             <button class="nav-btn" id="open-create-btn" style="font-size:24px;">+</button>
             <button class="nav-btn desktop-only" id="close-sidebar-btn" style="font-size:20px; padding:0 4px;">✕</button>
           </div>
         </div>
         <div class="skill-list">
-          ${state.skills.map(renderSkillCard).join("") || `<div class="text-muted text-center mt-3">暂无候选。</div>`}
+          ${state.skills.map(renderSkillCard).join("") || `<div class="text-muted text-center mt-3">暂无 Skill。</div>`}
         </div>
       </div>
 
@@ -493,7 +492,7 @@ function render(options: { preserveScroll?: boolean } = {}): void {
         <div class="desktop-only-flex" style="margin-bottom: 12px; align-items: center;">
           <button class="nav-btn" id="toggle-sidebar-btn" style="font-size:20px; padding: 4px; display: flex; align-items: center; gap: 8px;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            ${state.isSidebarCollapsed ? '<span style="font-size: 15px; font-weight: 600;">Skill 候选</span>' : ''}
+            ${state.isSidebarCollapsed ? '<span style="font-size: 15px; font-weight: 600;">Skill 创作列表</span>' : ''}
           </button>
         </div>
         ${state.error ? `
@@ -502,7 +501,7 @@ function render(options: { preserveScroll?: boolean } = {}): void {
             <span>${escapeHtml(state.error)}</span>
           </div>
         ` : ""}
-        ${state.detail ? renderSkillDetail(state.detail) : `<div class="text-muted text-center mt-3">请选择一个 Skill 候选以开始。</div>`}
+        ${state.detail ? renderSkillDetail(state.detail) : `<div class="text-muted text-center mt-3">请选择一个 Skill 创作项以开始。</div>`}
       </div>
 
       <!-- Create Modal -->
@@ -510,7 +509,7 @@ function render(options: { preserveScroll?: boolean } = {}): void {
         <div class="modal-content">
           <form id="create-skill-form">
             <div class="modal-header">
-              <h3>新建候选</h3>
+              <h3>新建 Skill</h3>
               <button type="button" class="modal-close" id="close-create-btn">&times;</button>
             </div>
             <div class="modal-body">
@@ -530,7 +529,7 @@ function render(options: { preserveScroll?: boolean } = {}): void {
                   <option>APIGuide</option>
                 </select>
               </div>
-              <button type="submit" class="btn-primary btn-full mt-3">创建候选</button>
+              <button type="submit" class="btn-primary btn-full mt-3">创建 Skill</button>
             </div>
           </form>
         </div>
@@ -578,9 +577,9 @@ function renderAddMaterial(): string {
 
         <textarea name="text" id="text-material-body" rows="6" placeholder="识别结果将显示在此处。支持直接输入或粘贴文本。" required>${escapeHtml(state.textDraft)}</textarea>
 
-        <div class="mt-2" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.5); padding: 4px 4px 4px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.8);">
-          <label class="text-sm text-muted" style="white-space: nowrap; font-weight: 600;">素材权重:</label>
-          <select name="confidence" style="margin: 0; border: none; background: transparent; box-shadow: none; padding-left: 0;">
+        <div class="confidence-row mt-2">
+          <label class="confidence-label">素材权重:</label>
+          <select name="confidence" class="confidence-select">
             <option value="high">核心</option>
             <option value="medium" selected>参考</option>
             <option value="low">补充</option>

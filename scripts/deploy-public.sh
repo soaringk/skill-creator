@@ -8,6 +8,10 @@ UV_CACHE_DIR=/tmp/uv-cache uv sync --extra dev
 
 sudo tee /etc/nginx/snippets/skill-creator-api.conf >/dev/null <<'EOF'
 location ^~ /tools/skill-creator/api/ {
+    allow 127.0.0.1;
+    allow ::1;
+    deny all;
+
     client_max_body_size 100m;
     proxy_pass http://127.0.0.1:8010/api/;
     proxy_http_version 1.1;
@@ -16,6 +20,8 @@ location ^~ /tools/skill-creator/api/ {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
 
     proxy_buffering off;
     proxy_cache off;
@@ -52,4 +58,4 @@ sudo systemctl reload nginx
 "$ROOT/scripts/start-backend.sh"
 "$ROOT/scripts/start-frontend.sh"
 
-echo "Skill Creator frontend and API are ready for https://kefan.life/tools/skill-creator/"
+echo "Skill Creator frontend is ready for https://kefan.life/tools/skill-creator/; API proxy is localhost-only."

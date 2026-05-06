@@ -109,10 +109,14 @@ cd /home/cody/skill-creator
 
 The deploy script:
 
-- adds the nginx API proxy for `/tools/skill-creator/api/*`
+- adds a localhost-only nginx API proxy for `/tools/skill-creator/api/*`
 - adds the nginx frontend proxy for `/tools/skill-creator/*`
 - starts the backend manually on `127.0.0.1:8010`
 - builds and starts the frontend static server manually on `127.0.0.1:5173`
+
+The API proxy is intentionally not public. The service can write local candidate files
+and run ASR/OpenCode jobs, so exposing it to the internet requires a real auth/session
+model first.
 
 Backend process controls:
 
@@ -127,9 +131,16 @@ Nginx shape:
 
 ```nginx
 location ^~ /tools/skill-creator/api/ {
+    allow 127.0.0.1;
+    allow ::1;
+    deny all;
+
     proxy_pass http://127.0.0.1:8010/api/;
+    proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
 }
 
 location ^~ /tools/skill-creator/ {
