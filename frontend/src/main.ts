@@ -6,7 +6,6 @@ type SkillSummary = {
   status: string;
   target_category?: string | null;
   material_count: number;
-  usable_material_count: number;
   updated_at?: string | null;
   rules_target?: string | null;
 };
@@ -14,11 +13,8 @@ type SkillSummary = {
 type MaterialSummary = {
   id: string;
   type: string;
-  status: string;
   path: string;
   uploaded_at?: string | null;
-  source_file?: string | null;
-  asr?: Record<string, unknown>;
   content?: string;
 };
 
@@ -28,6 +24,12 @@ type SkillDetail = {
   materials: MaterialSummary[];
   draft: string;
   promoted?: string | null;
+};
+
+type DraftSections = {
+  publishable: string;
+  review: string;
+  raw: string;
 };
 
 type JobRecord = {
@@ -41,6 +43,13 @@ type JobRecord = {
   result?: Record<string, unknown>;
 };
 
+type UseStreamEvent =
+  | { type: "session"; session_id: string }
+  | { type: "status"; message: string }
+  | { type: "delta"; text: string }
+  | { type: "done" }
+  | { type: "error"; message: string };
+
 const state = {
   skills: [] as SkillSummary[],
   jobs: [] as JobRecord[],
@@ -48,6 +57,9 @@ const state = {
   detail: null as SkillDetail | null,
   error: "",
   useSession: "",
+  useOutput: "",
+  useStatus: "",
+  useRunning: false,
   transcribing: false,
   isRecording: false,
   textDraft: "",
@@ -166,9 +178,7 @@ async function addText(event: Event): Promise<void> {
     method: "POST",
     body: JSON.stringify({
       text: String(form.get("text") || ""),
-      source_url: null,
       confidence: String(form.get("confidence") || "medium"),
-      topics: []
     })
   });
   state.textDraft = "";
@@ -232,6 +242,11 @@ async function transcribeFile(file: File): Promise<void> {
 }
 
 async function transcribeOfflineFile(file: File): Promise<void> {
+  if (!file.type.startsWith("audio/")) {
+    state.error = "请上传音频文件。";
+    render();
+    return;
+  }
   state.transcribing = true;
   state.error = "";
   render();
@@ -269,15 +284,34 @@ async function useSkill(event: Event): Promise<void> {
   event.preventDefault();
   if (!state.selectedSlug) return;
   const form = new FormData(event.currentTarget as HTMLFormElement);
-  const result = await api<{ session_id: string }>(`/api/skills/${state.selectedSlug}/use`, {
-    method: "POST",
-    body: JSON.stringify({
-      prompt: String(form.get("prompt") || ""),
-      source: String(form.get("source") || "promoted")
-    })
-  });
-  state.useSession = result.session_id;
+  state.error = "";
+  state.useSession = "";
+  state.useOutput = "";
+  state.useStatus = "正在连接 Agent...";
+  state.useRunning = true;
   render();
+  try {
+    const response = await fetch(apiUrl(`/api/skills/${state.selectedSlug}/use/stream`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: String(form.get("prompt") || ""),
+        source: String(form.get("source") || "promoted")
+      })
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(errorMessage(text, response.status));
+    }
+    if (!response.body) throw new Error("浏览器不支持流式响应。");
+    await readUseStream(response.body);
+  } catch (error) {
+    state.error = error instanceof Error ? error.message : String(error);
+  } finally {
+    state.useRunning = false;
+    if (state.useStatus !== "运行失败") state.useStatus = state.useOutput ? "完成" : "";
+    render();
+  }
 }
 
 function render(): void {
@@ -376,11 +410,11 @@ function renderAddMaterial(): string {
       <form id="text-form">
         <div class="asr-actions">
           <button type="button" class="btn-record ${state.isRecording ? 'recording' : ''}" id="btn-record">
-            ${state.isRecording ? '🛑 停止录音' : '🎙️ 录音'}
+            ${state.isRecording ? '🛑 停止' : '🎙️ 语音输入'}
           </button>
           <label class="btn-upload-asr">
             📁 上传音频
-            <input type="file" id="asr-file" accept="audio/*,video/*" style="display: none;" />
+            <input type="file" id="asr-file" accept="audio/*" style="display: none;" />
           </label>
         </div>
 
@@ -411,7 +445,7 @@ function renderSkillDetail(detail: SkillDetail): string {
       <h1 class="title">${escapeHtml(detail.summary.title)}</h1>
       <div class="meta">
         <span class="badge ${statusClass}">${escapeHtml(detail.summary.status)}</span>
-        <span class="text-sm">${detail.summary.usable_material_count}/${detail.summary.material_count} 可用素材</span>
+        <span class="text-sm">${detail.summary.material_count} 个素材</span>
       </div>
     </div>
 
@@ -435,7 +469,6 @@ function renderSkillDetail(detail: SkillDetail): string {
               <details>
                 <summary class="material-preview-summary">
                   <div class="m-type" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(title)}">${escapeHtml(displayTitle)}</div>
-                  <div class="badge ${m.status.toLowerCase()}">${escapeHtml(m.status)}</div>
                   <div class="m-id">${escapeHtml(m.id.substring(0,8))}</div>
                 </summary>
                 ${m.content ? '<pre class="code-block" style="margin-top: 10px;">' + escapeHtml(m.content) + '</pre>' : '<div class="text-muted text-sm mt-2 text-center">暂无内容。</div>'}
@@ -446,19 +479,7 @@ function renderSkillDetail(detail: SkillDetail): string {
         </div>
       </div>
 
-      <div class="card mt-3">
-        <h2 class="card-title">Skill 状态</h2>
-        <details open>
-          <summary>查看 Draft</summary>
-          <pre class="code-block">${escapeHtml(detail.draft || "暂无 Draft。")}</pre>
-        </details>
-        ${detail.promoted ? `
-        <details class="mt-2">
-          <summary>查看已发布版本</summary>
-          <pre class="code-block">${escapeHtml(detail.promoted)}</pre>
-        </details>
-        ` : ''}
-      </div>
+      ${renderSkillStatus(detail)}
     </div>
 
     <div class="area-section test-area">
@@ -470,8 +491,8 @@ function renderSkillDetail(detail: SkillDetail): string {
             <option value="draft">草稿版本</option>
             <option value="promoted">发布版本</option>
           </select>
-          <button type="submit" class="btn-secondary btn-full mt-2">运行 Agent</button>
-          ${state.useSession ? `<div class="mt-2 text-sm text-muted text-center">会话：${escapeHtml(state.useSession)}</div>` : ''}
+          <button type="submit" class="btn-secondary btn-full mt-2" ${state.useRunning ? "disabled" : ""}>${state.useRunning ? "运行中..." : "运行 Agent"}</button>
+          ${renderAgentOutput()}
         </form>
 
         <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 24px 0;" />
@@ -493,6 +514,121 @@ function renderSkillDetail(detail: SkillDetail): string {
       </div>
     </div>
   `;
+}
+
+function renderSkillStatus(detail: SkillDetail): string {
+  const draft = parseDraftSections(detail.draft);
+  return `
+    <div class="card mt-3">
+      <h2 class="card-title">Skill 状态</h2>
+      ${draft.publishable || draft.review ? `
+        <details open>
+          <summary>可发布内容</summary>
+          <pre class="draft-block">${escapeHtml(draft.publishable || "暂无可发布内容。")}</pre>
+        </details>
+        ${draft.review ? `
+        <details class="mt-2">
+          <summary>评审备注</summary>
+          <pre class="draft-block">${escapeHtml(draft.review)}</pre>
+        </details>
+        ` : ''}
+      ` : `
+        <details open>
+          <summary>草稿</summary>
+          <pre class="draft-block">${escapeHtml(draft.raw || "暂无草稿。")}</pre>
+        </details>
+      `}
+      ${detail.promoted ? `
+      <details class="mt-2">
+        <summary>已发布版本</summary>
+        <pre class="draft-block">${escapeHtml(detail.promoted)}</pre>
+      </details>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderAgentOutput(): string {
+  if (!state.useSession && !state.useOutput && !state.useStatus) return "";
+  return `
+    <div class="agent-output mt-2">
+      <div class="agent-output-header">
+        <span>${escapeHtml(state.useStatus || "输出")}</span>
+        ${state.useSession ? `<span>会话 ${escapeHtml(state.useSession.substring(0, 8))}</span>` : ""}
+      </div>
+      <pre>${escapeHtml(state.useOutput || (state.useRunning ? "等待输出..." : "暂无输出。"))}</pre>
+    </div>
+  `;
+}
+
+async function readUseStream(body: ReadableStream<Uint8Array>): Promise<void> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (line.trim()) handleUseStreamEvent(JSON.parse(line) as UseStreamEvent);
+    }
+    render();
+    if (done) break;
+  }
+  if (buffer.trim()) {
+    handleUseStreamEvent(JSON.parse(buffer) as UseStreamEvent);
+    render();
+  }
+}
+
+function handleUseStreamEvent(event: UseStreamEvent): void {
+  if (event.type === "session") {
+    state.useSession = event.session_id;
+    return;
+  }
+  if (event.type === "status") {
+    state.useStatus = event.message;
+    return;
+  }
+  if (event.type === "delta") {
+    state.useOutput += event.text;
+    state.useStatus = "正在输出";
+    return;
+  }
+  if (event.type === "error") {
+    state.useStatus = "运行失败";
+    throw new Error(event.message);
+  }
+  if (event.type === "done") {
+    state.useStatus = "完成";
+  }
+}
+
+function parseDraftSections(draft: string): DraftSections {
+  const raw = draft.trim();
+  const publishableHeading = raw.match(/^##\s+Publishable Skill\s*$/im);
+  if (!publishableHeading || publishableHeading.index === undefined) {
+    return { publishable: "", review: "", raw };
+  }
+
+  const publishableStart = publishableHeading.index + publishableHeading[0].length;
+  const reviewMatch = raw.slice(publishableStart).match(/^##\s+Draft Review\s*$/im);
+  if (!reviewMatch || reviewMatch.index === undefined) {
+    return {
+      publishable: raw.slice(publishableStart).trim(),
+      review: "",
+      raw,
+    };
+  }
+
+  const reviewStart = publishableStart + reviewMatch.index;
+  const reviewBodyStart = reviewStart + reviewMatch[0].length;
+  return {
+    publishable: raw.slice(publishableStart, reviewStart).trim(),
+    review: raw.slice(reviewBodyStart).trim(),
+    raw,
+  };
 }
 
 function renderJobNotice(slug: string): string {

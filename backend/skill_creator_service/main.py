@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
+from typing import Any, Iterator
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from .asr import transcribe_with_dashscope_realtime
+from .audio_uploads import AudioUploadError, validate_audio_container, validated_audio_suffix
 from .config import load_settings
 from .jobs import JobRunner, JobStore
 from .models import CreateSkillRequest, JobRecord, TextMaterialRequest, UseSkillRequest
@@ -50,6 +54,14 @@ def handle_store_error(exc: StoreError) -> HTTPException:
     return HTTPException(status_code=400, detail=str(exc))
 
 
+def read_valid_audio_upload(file: UploadFile, content: bytes) -> tuple[bytes, str]:
+    try:
+        suffix = validated_audio_suffix(file.filename, file.content_type, content)
+    except AudioUploadError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return content, suffix
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -89,9 +101,7 @@ def add_text_material(slug: str, request: TextMaterialRequest):
         result = store.add_text_material(
             slug,
             text=request.text,
-            source_url=request.source_url,
             confidence=request.confidence,
-            topics=request.topics,
         )
         draft(slug)
         return result
@@ -102,10 +112,14 @@ def add_text_material(slug: str, request: TextMaterialRequest):
 @app.post("/api/asr/text-draft")
 async def transcribe_text_draft(file: UploadFile = File(...)):
     content = await file.read()
-    suffix = Path(file.filename or "audio").suffix
+    content, suffix = read_valid_audio_upload(file, content)
     with tempfile.NamedTemporaryFile(prefix="skill_creator_text_draft_", suffix=suffix, delete=True) as temp_file:
         temp_file.write(content)
         temp_file.flush()
+        try:
+            validate_audio_container(Path(temp_file.name))
+        except AudioUploadError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         result = transcribe_with_dashscope_realtime(
             Path(temp_file.name),
             api_key=settings.dashscope_api_key,
@@ -119,10 +133,14 @@ async def transcribe_text_draft(file: UploadFile = File(...)):
 async def transcribe_offline_text_draft(file: UploadFile = File(...)):
     from .asr import transcribe_with_dashscope_offline
     content = await file.read()
-    suffix = Path(file.filename or "audio").suffix
+    content, suffix = read_valid_audio_upload(file, content)
     with tempfile.NamedTemporaryFile(prefix="skill_creator_offline_draft_", suffix=suffix, delete=True) as temp_file:
         temp_file.write(content)
         temp_file.flush()
+        try:
+            validate_audio_container(Path(temp_file.name))
+        except AudioUploadError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         result = transcribe_with_dashscope_offline(
             Path(temp_file.name),
             api_key=settings.dashscope_api_key,
@@ -159,6 +177,35 @@ def promote(slug: str):
 
 @app.post("/api/skills/{slug}/use")
 def use_skill(slug: str, request: UseSkillRequest):
+    session_id, prompt = prepare_skill_use(slug, request)
+    response = opencode.send_message(
+        session_id,
+        prompt,
+        agent="skill-use",
+    )
+    return {"session_id": session_id, "response": response}
+
+
+@app.post("/api/skills/{slug}/use/stream")
+def use_skill_stream(slug: str, request: UseSkillRequest):
+    session_id, prompt = prepare_skill_use(slug, request)
+
+    def events() -> Iterator[str]:
+        yield json_line({"type": "session", "session_id": session_id})
+        try:
+            for event in opencode.stream_message(
+                session_id,
+                prompt,
+                agent="skill-use",
+            ):
+                yield json_line(event)
+        except RuntimeError as exc:
+            yield json_line({"type": "error", "message": str(exc)})
+
+    return StreamingResponse(events(), media_type="application/x-ndjson")
+
+
+def prepare_skill_use(slug: str, request: UseSkillRequest) -> tuple[str, str]:
     try:
         detail = store.get_skill(slug)
     except StoreError as exc:
@@ -180,25 +227,11 @@ User request:
 {request.prompt}
 """
     session_id = opencode.create_session(f"Use skill: {slug}")
-    response = opencode.send_message(
-        session_id,
-        prompt,
-        agent="skill-use",
-        tools={
-            "bash": False,
-            "read": True,
-            "grep": True,
-            "glob": True,
-            "list": True,
-            "patch": False,
-            "write": False,
-            "edit": False,
-            "webfetch": False,
-            "web_search": False,
-            "skill": False,
-        },
-    )
-    return {"session_id": session_id, "response": response}
+    return session_id, prompt
+
+
+def json_line(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, ensure_ascii=False) + "\n"
 
 
 @app.get("/api/jobs", response_model=list[JobRecord])

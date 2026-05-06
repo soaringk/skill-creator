@@ -35,6 +35,14 @@ This project is actively developing. Backward compatibility is not required yet;
 - Prefer concise, straightforward Chinese for user-facing UI text.
 - Use English only for technical identifiers, API paths, model/provider names, or raw error messages.
 
+## UI Design
+
+- Follow the existing glassmorphism direction for frontend UI: translucent surfaces, strong enough background blur, subtle borders, restrained shadows, and clear depth between background, panels, controls, and output areas.
+- Use glass effects to clarify hierarchy, not as decoration. Keep content readable first; increase opacity or blur when text contrast suffers.
+- Keep the style subtle and product-focused. Avoid cluttered translucency, busy backgrounds behind dense text, and decorative effects that make repeated workflow use harder.
+- For new UI, reuse existing CSS tokens and patterns before adding new visual primitives.
+- Reference principles: NN/g glassmorphism guidance (`https://www.nngroup.com/articles/glassmorphism/`) and LogRocket glassmorphism overview (`https://blog.logrocket.com/ux-design/what-is-glassmorphism/`).
+
 ## Documentation Workflow
 
 This repository uses a two-layer documentation system managed by the `doc-flow` skill.
@@ -42,5 +50,3 @@ This repository uses a two-layer documentation system managed by the `doc-flow` 
 1. Read `docs/index.yaml` at session start to discover durable docs.
 2. Load the `doc-flow` skill for the documentation workflow when it is available; if it is unavailable, follow `docs/index.yaml` manually.
 3. Keep durable docs under `docs/` and task chronology under `docs/worklog/`.
-
-**Layers** — Durable docs: `docs/architecture/`, `docs/constraints/`, `docs/decisions/`, `docs/lessons/`, `docs/risks/`. Ephemeral worklogs: `docs/worklog/active/`. Do not create a third layer.

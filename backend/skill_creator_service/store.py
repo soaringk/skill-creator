@@ -75,7 +75,6 @@ class SkillStore:
             status=str(frontmatter.get("status") or "unknown"),
             target_category=frontmatter.get("target_category"),
             material_count=int(frontmatter.get("material_count") or 0),
-            usable_material_count=int(frontmatter.get("usable_material_count") or 0),
             updated_at=str(frontmatter.get("updated_at") or "") or None,
             rules_target=frontmatter.get("rules_target"),
         )
@@ -139,7 +138,6 @@ class SkillStore:
             "created_at": now,
             "updated_at": now,
             "material_count": 0,
-            "usable_material_count": 0,
         }
         self._write_doc(skill_dir / "index.md", frontmatter, body)
         self.refresh_counts(slug)
@@ -195,11 +193,8 @@ class SkillStore:
                 MaterialSummary(
                     id=str(frontmatter.get("id") or path.stem),
                     type=str(frontmatter.get("type") or path.parent.name),
-                    status=str(frontmatter.get("status") or "unknown"),
                     path=self._relative(path),
                     uploaded_at=str(frontmatter.get("uploaded_at") or "") or None,
-                    source_file=frontmatter.get("source_file"),
-                    asr=frontmatter.get("asr") if isinstance(frontmatter.get("asr"), dict) else {},
                     content=body.strip(),
                 )
             )
@@ -209,9 +204,7 @@ class SkillStore:
         self,
         slug: str,
         text: str,
-        source_url: str | None,
         confidence: str,
-        topics: list[str],
     ) -> MaterialSummary:
         skill_dir = self._skill_dir(slug)
         if not skill_dir.exists():
@@ -221,13 +214,8 @@ class SkillStore:
         frontmatter = {
             "id": mid,
             "type": "text",
-            "status": "usable",
-            "source_file": None,
-            "source_url": source_url,
             "uploaded_at": utc_now(),
-            "topics": topics,
             "confidence": confidence,
-            "asr": {"required": False, "status": None},
         }
         self._write_doc(path, frontmatter, text.strip() + "\n")
         self.refresh_counts(slug)
@@ -243,7 +231,6 @@ class SkillStore:
             return
         materials = self.list_materials(slug)
         frontmatter["material_count"] = len(materials)
-        frontmatter["usable_material_count"] = sum(1 for item in materials if item.status == "usable")
         frontmatter["updated_at"] = utc_now()
         self._write_doc(index_path, frontmatter, body)
 
@@ -262,10 +249,7 @@ class SkillStore:
         return MaterialSummary(
             id=str(frontmatter.get("id") or path.stem),
             type=str(frontmatter.get("type") or path.parent.name),
-            status=str(frontmatter.get("status") or "unknown"),
             path=self._relative(path),
             uploaded_at=str(frontmatter.get("uploaded_at") or "") or None,
-            source_file=frontmatter.get("source_file"),
-            asr=frontmatter.get("asr") if isinstance(frontmatter.get("asr"), dict) else {},
             content=body.strip(),
         )

@@ -14,7 +14,6 @@ class SkillSummary(BaseModel):
     status: str
     target_category: str | None = None
     material_count: int = 0
-    usable_material_count: int = 0
     updated_at: str | None = None
     rules_target: str | None = None
 
@@ -22,11 +21,8 @@ class SkillSummary(BaseModel):
 class MaterialSummary(BaseModel):
     id: str
     type: str
-    status: str
     path: str
     uploaded_at: str | None = None
-    source_file: str | None = None
-    asr: dict[str, Any] = Field(default_factory=dict)
     content: str = ""
 
 
@@ -49,9 +45,7 @@ class CreateSkillRequest(BaseModel):
 
 class TextMaterialRequest(BaseModel):
     text: str
-    source_url: str | None = None
     confidence: str = "medium"
-    topics: list[str] = Field(default_factory=list)
 
 
 class JobRecord(BaseModel):

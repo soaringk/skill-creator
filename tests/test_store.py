@@ -20,7 +20,6 @@ def make_context(root: Path) -> None:
                 "status": "collecting",
                 "target_category": "Workflow",
                 "material_count": 0,
-                "usable_material_count": 0,
             },
             "# Candidate Skill\n",
         ),
@@ -48,13 +47,15 @@ def test_create_skill_and_add_text_material(tmp_path: Path) -> None:
         "Use on demo requests.",
         "No notes.",
     )
-    material = store.add_text_material("demo_skill", "Example material", None, "medium", [])
+    material = store.add_text_material("demo_skill", "Example material", "medium")
     detail = store.get_skill("demo_skill")
 
     assert summary.slug == "demo_skill"
-    assert material.status == "usable"
+    assert material.type == "text"
     assert detail.summary.material_count == 1
-    assert detail.summary.usable_material_count == 1
+    skill_dir = tmp_path / "contexts" / "skill_creator" / "demo_skill"
+    material_doc = parse_markdown(next((skill_dir / "materials").glob("*.md")).read_text(encoding="utf-8"))
+    assert set(material_doc.frontmatter) == {"id", "type", "uploaded_at", "confidence"}
 
 
 def test_rejects_bad_slug(tmp_path: Path) -> None:

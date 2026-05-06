@@ -31,7 +31,6 @@ rules_target:
 created_at: 2026-04-28
 updated_at: 2026-04-28
 material_count: 0
-usable_material_count: 0
 ---
 ```
 
@@ -44,43 +43,32 @@ usable_material_count: 0
 
 ## Material Frontmatter
 
-人工文本材料：
+`materials/` 目前只保存可用于生成 skill 的文本材料。录音和音频上传只用于 ASR 填充文本框；用户确认保存后，才会成为 text material。
 
 ```yaml
 ---
 id: 20260428_001
 type: text
-status: usable
-source_file:
-source_url:
 uploaded_at: 2026-04-28T00:00:00+08:00
-topics: []
 confidence: medium
-asr:
-  required: false
-  status:
 ---
 ```
 
-正文放人工文本、ASR 转录、摘录、用户备注或链接摘要。对于录音转录，`source_file` 指向后端保存的上传文件，`asr.status` 记录 `pending`、`done` 或 `failed`。
+字段含义：
 
-录音材料：
+- `id`: material 文件名和前端短标识来源
+- `type`: 目前固定为 `text`
+- `uploaded_at`: 保存时间
+- `confidence`: 用户给出的素材权重，供 draft agent 参考
 
-```yaml
----
-id: 20260428_002
-type: audio
-status: raw
-source_file: uploads/20260428_002.m4a
-uploaded_at: 2026-04-28T00:00:00+08:00
-topics: []
-confidence: medium
-asr:
-  required: true
-  status: pending
-  transcript_file:
----
-```
+正文放人工文本、ASR 转录、摘录、用户备注或链接摘要。
+
+音频处理规则：
+
+- 录音走 realtime ASR。
+- 上传文件走离线 ASR。
+- 前端只允许选择 `audio/*`。
+- 后端先校验 content type、扩展名和文件头，再用 `ffprobe` 确认临时文件只有 audio stream；非音频、混入视频或畸形文件直接拒绝并删除临时文件。
 
 ## Draft 与 Published
 
@@ -97,17 +85,19 @@ asr:
 
 Web 服务直接映射到当前文件状态机：
 
-- `GET /skills`: 读取所有 `*/index.md` frontmatter
-- `POST /skills`: 从 `_template/` 创建新候选目录
-- `POST /skills/:slug/materials/text`: 创建 `materials/<material_id>.md`
-- `POST /skills/:slug/draft`: 根据 usable materials 生成或刷新 `draft.md`
-- `POST /skills/:slug/promote`: 经过 admin token 校验后写入 `rules/skills/`，更新 `rules/skills/INDEX.md` 和 `published.md`
-- `POST /skills/:slug/use`: 使用 draft 或 published 内容进行只读对话
+- `GET /api/skills`: 读取所有 `*/index.md` frontmatter
+- `POST /api/skills`: 从 `_template/` 创建新候选目录
+- `POST /api/asr/text-draft`: 录音 realtime ASR，返回文本草稿
+- `POST /api/asr/offline-text-draft`: 上传音频离线 ASR，返回文本草稿
+- `POST /api/skills/:slug/materials/text`: 创建 `materials/<material_id>.md`
+- `POST /api/skills/:slug/draft`: 根据已保存材料生成或刷新 `draft.md`
+- `POST /api/skills/:slug/promote`: 经过 admin token 校验后写入 `rules/skills/`，更新 `rules/skills/INDEX.md` 和 `published.md`
+- `POST /api/skills/:slug/use`: 使用 draft 或 published 内容进行只读对话
 
 ## 自动蒸馏规则
 
 自动化可以主动生成草案，但晋升到 `rules/skills/` 必须经过 admin token 校验。默认门槛：
 
-- `usable_material_count >= 2`，或存在一份完整高质量 transcript
+- `material_count >= 2`，或存在一份完整高质量 transcript
 - `draft.md` 的 `Publishable Skill` 能清楚说明触发条件、流程、边界和失败模式
 - `Draft Review` 能明确说明素材覆盖和继续完善方向
