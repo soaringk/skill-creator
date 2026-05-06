@@ -72,13 +72,13 @@ function apiUrl(path: string): string {
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
-  
+
   if (path.endsWith('/promote')) {
     const token = prompt("请输入 Admin Token 以发布 Skill:");
     if (!token) throw new Error("发布需要 Admin Token");
     headers.set("X-Admin-Token", token.trim());
   }
-  
+
   const response = await fetch(apiUrl(path), { ...options, headers });
   if (!response.ok) {
     const text = await response.text();
@@ -91,7 +91,7 @@ async function load(): Promise<void> {
   try {
     const skills = await api<SkillSummary[]>("/api/skills");
     state.skills = skills;
-    
+
     if (!state.selectedSlug && skills.length > 0) {
       state.selectedSlug = skills[0].slug;
       if (window.innerWidth > 768) state.isMobileListVisible = false;
@@ -157,16 +157,16 @@ async function toggleRecording(): Promise<void> {
     render();
     return;
   }
-  
+
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(stream);
     audioChunks = [];
-    
+
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunks.push(e.data);
     };
-    
+
     mediaRecorder.onstop = async () => {
       const mimeType = mediaRecorder?.mimeType || 'audio/webm';
       const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
@@ -175,7 +175,7 @@ async function toggleRecording(): Promise<void> {
       await transcribeFile(file);
       stream.getTracks().forEach(track => track.stop());
     };
-    
+
     mediaRecorder.start();
     state.isRecording = true;
     render();
@@ -244,8 +244,8 @@ function render(): void {
   app.innerHTML = `
     <div class="app-layout">
       <nav class="mobile-nav">
-        ${!state.isMobileListVisible ? 
-          `<button class="nav-btn" id="back-btn">← Skill 候选</button>` : 
+        ${!state.isMobileListVisible ?
+          `<button class="nav-btn" id="back-btn">← Skill 候选</button>` :
           `<div style="font-size:18px;">Skill Creator</div>`
         }
       </nav>
@@ -336,7 +336,7 @@ function renderAddMaterial(): string {
         <button type="button" class="tab ${state.materialTab === 'text' ? 'active' : ''}" data-tab="text">✍️ 文本输入</button>
         <button type="button" class="tab ${state.materialTab === 'file' ? 'active' : ''}" data-tab="file">📁 上传音频</button>
       </div>
-      
+
       <div>
         ${state.materialTab === 'text' ? `
           <form id="text-form">
@@ -349,17 +349,17 @@ function renderAddMaterial(): string {
                 <input type="file" id="asr-file" accept="audio/*,video/*" style="display: none;" />
               </label>
             </div>
-            
+
             ${state.transcribing ? `<div class="text-sm text-muted mb-2">正在识别语音，请稍候...</div>` : ''}
-            
+
             <textarea name="text" id="text-material-body" rows="6" placeholder="识别结果将显示在此处。支持直接输入或粘贴文本。" required>${escapeHtml(state.textDraft)}</textarea>
-            
+
             <div class="mt-2" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.5); padding: 4px 4px 4px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.8);">
               <label class="text-sm text-muted" style="white-space: nowrap; font-weight: 600;">素材权重:</label>
               <select name="confidence" style="margin: 0; border: none; background: transparent; box-shadow: none; padding-left: 0;">
-                <option value="high">主要参考 (核心内容)</option>
-                <option value="medium" selected>一般参考 (补充说明)</option>
-                <option value="low">仅供参考 (相关性较低)</option>
+                <option value="high">核心</option>
+                <option value="medium" selected>参考</option>
+                <option value="low">补充</option>
               </select>
             </div>
             <button type="submit" class="btn-primary btn-full mt-3">保存文本</button>
@@ -384,7 +384,7 @@ function renderAddMaterial(): string {
 function renderSkillDetail(detail: SkillDetail): string {
   const slug = detail.summary.slug;
   const statusClass = detail.summary.status.toLowerCase();
-  
+
   return `
     <div class="detail-header">
       <h1 class="title">${escapeHtml(detail.summary.title)}</h1>
@@ -432,17 +432,17 @@ function renderSkillDetail(detail: SkillDetail): string {
       <div class="area-header">3. 测试与发布</div>
       <div class="card">
         <form id="use-skill">
-          <textarea name="prompt" rows="3" placeholder="向只读 Agent 提问..." required></textarea>
+          <textarea name="prompt" rows="3" placeholder="描述如何使用 Skill..." required></textarea>
           <select name="source" class="mt-2">
-            <option value="draft">当前草稿</option>
-            <option value="promoted">已发布的 Skill</option>
+            <option value="draft">草稿版本</option>
+            <option value="promoted">发布版本</option>
           </select>
           <button type="submit" class="btn-secondary btn-full mt-2">运行 Agent</button>
           ${state.useSession ? `<div class="mt-2 text-sm text-muted text-center">会话：${escapeHtml(state.useSession)}</div>` : ''}
         </form>
-        
+
         <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 24px 0;" />
-        
+
         <div class="publish-section" style="text-align: center;">
             <p class="text-muted text-sm mb-3">测试满意后，可将当前版本发布生效。</p>
             <button type="button" class="btn-primary btn-full" style="background: linear-gradient(135deg, #34c759, #28a745); box-shadow: 0 4px 14px rgba(52, 199, 89, 0.3);" data-action="/api/skills/${escapeHtml(slug)}/promote">
@@ -468,7 +468,7 @@ function attachListeners() {
     state.isMobileListVisible = true;
     render();
   });
-  
+
   document.querySelector<HTMLButtonElement>('#toggle-sidebar-btn')?.addEventListener('click', () => {
     state.isSidebarCollapsed = !state.isSidebarCollapsed;
     render();
@@ -489,10 +489,10 @@ function attachListeners() {
   // Material Form Handlers
   document.querySelector<HTMLFormElement>('#text-form')?.addEventListener('submit', addText);
   document.querySelector<HTMLFormElement>('#audio-file-form')?.addEventListener('submit', addAudio);
-  
+
   // ASR Inline Handlers
   document.querySelector<HTMLButtonElement>('#btn-record')?.addEventListener('click', toggleRecording);
-  
+
   document.querySelector<HTMLInputElement>('#asr-file')?.addEventListener('change', (e) => {
     const target = e.target as HTMLInputElement;
     if (target.files?.length) {
@@ -500,7 +500,7 @@ function attachListeners() {
       target.value = ""; // reset
     }
   });
-  
+
   document.querySelector<HTMLTextAreaElement>('#text-material-body')?.addEventListener('input', (e) => {
     state.textDraft = (e.target as HTMLTextAreaElement).value;
   });
@@ -523,12 +523,12 @@ function attachListeners() {
       if (actionUrl) action(actionUrl);
     });
   });
-  
+
   document.querySelector<HTMLButtonElement>('#open-create-btn')?.addEventListener('click', () => {
     state.isModalOpen = true;
     render();
   });
-  
+
   document.querySelector<HTMLButtonElement>('#close-create-btn')?.addEventListener('click', () => {
     state.isModalOpen = false;
     render();
