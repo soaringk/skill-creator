@@ -122,3 +122,81 @@ def transcribe_with_dashscope_realtime(
     if not text:
         text = "[no speech detected]"
     return TranscriptResult(text=text, request_id=request_id)
+
+
+def transcribe_with_dashscope_offline(
+    audio_path: Path,
+    *,
+    api_key: str,
+    model: str = "fun-asr",
+) -> TranscriptResult:
+    if not api_key:
+        raise RuntimeError("DASHSCOPE_API_KEY is required for ASR")
+
+    try:
+        import dashscope
+        from dashscope.audio.asr import Transcription
+    except ImportError as exc:
+        raise RuntimeError("dashscope package is required for ASR") from exc
+
+    import json
+    import urllib.request
+    from http import HTTPStatus
+
+    dashscope.api_key = api_key
+
+    # For local files, dashscope Python SDK transparently uploads to OSS if URI is file://
+    file_url = f"file://{audio_path.absolute()}"
+
+    task_response = Transcription.async_call(
+        model=model,
+        file_urls=[file_url],
+    )
+
+    if task_response.status_code != HTTPStatus.OK:
+        msg = getattr(task_response, "message", "Unknown error")
+        raise RuntimeError(f"Failed to submit transcription task: {msg}")
+
+    task_id = task_response.output.task_id
+    transcribe_response = Transcription.wait(task=task_id)
+
+    if transcribe_response.status_code != HTTPStatus.OK:
+        msg = getattr(transcribe_response, "message", "Unknown error")
+        raise RuntimeError(f"Transcription task failed: {msg}")
+
+    output = transcribe_response.output
+    if output.task_status != "SUCCEEDED":
+        raise RuntimeError(f"Transcription task ended with status {output.task_status}")
+
+    results = output.results
+    if not results:
+        raise RuntimeError("No results returned from transcription task")
+
+    result = results[0]
+    if result.get("subtask_status") != "SUCCEEDED":
+        msg = result.get("message", "Unknown subtask error")
+        raise RuntimeError(f"Transcription subtask failed: {msg}")
+
+    transcription_url = result.get("transcription_url")
+    if not transcription_url:
+        raise RuntimeError("Missing transcription_url in results")
+
+    try:
+        req = urllib.request.Request(transcription_url)
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"Failed to download or parse transcription result: {exc}") from exc
+
+    transcripts = data.get("transcripts", [])
+    texts = []
+    for t in transcripts:
+        if "text" in t and t["text"].strip():
+            texts.append(t["text"].strip())
+
+    text = "\n".join(texts).strip()
+    if not text:
+        text = "[no speech detected]"
+
+    return TranscriptResult(text=text, request_id=task_id)
+

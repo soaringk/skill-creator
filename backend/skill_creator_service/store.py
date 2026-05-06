@@ -205,7 +205,7 @@ class SkillStore:
         if not skill_dir.exists():
             raise StoreError(f"Unknown skill candidate: {slug}")
         mid = material_id()
-        path = skill_dir / "materials" / "text" / f"{mid}.md"
+        path = skill_dir / "materials" / f"{mid}.md"
         frontmatter = {
             "id": mid,
             "type": "text",
@@ -221,88 +221,7 @@ class SkillStore:
         self.refresh_counts(slug)
         return self._material_from_path(path)
 
-    def add_audio_material(self, slug: str, filename: str, content: bytes) -> MaterialSummary:
-        skill_dir = self._skill_dir(slug)
-        if not skill_dir.exists():
-            raise StoreError(f"Unknown skill candidate: {slug}")
-        mid = material_id()
-        clean_name = safe_filename(filename)
-        upload_name = f"{mid}_{clean_name}"
-        upload_path = skill_dir / "materials" / "audio" / "uploads" / upload_name
-        upload_path.parent.mkdir(parents=True, exist_ok=True)
-        upload_path.write_bytes(content)
 
-        metadata_path = skill_dir / "materials" / "audio" / f"{mid}.md"
-        source_file = str(upload_path.relative_to(skill_dir))
-        frontmatter = {
-            "id": mid,
-            "type": "audio",
-            "status": "raw",
-            "source_file": source_file,
-            "uploaded_at": utc_now(),
-            "topics": [],
-            "confidence": "medium",
-            "asr": {
-                "required": True,
-                "status": "pending",
-                "transcript_file": None,
-            },
-        }
-        body = f"Raw audio upload: `{source_file}`\n"
-        self._write_doc(metadata_path, frontmatter, body)
-        self.refresh_counts(slug)
-        return self._material_from_path(metadata_path)
-
-    def update_audio_asr(
-        self,
-        slug: str,
-        material_id_value: str,
-        status: str,
-        transcript_file: str | None = None,
-        error_message: str | None = None,
-    ) -> None:
-        metadata_path = self._skill_dir(slug) / "materials" / "audio" / f"{material_id_value}.md"
-        frontmatter, body = self._read_doc(metadata_path)
-        if not frontmatter:
-            raise StoreError(f"Missing audio material metadata: {material_id_value}")
-        asr = frontmatter.get("asr") if isinstance(frontmatter.get("asr"), dict) else {}
-        asr["status"] = status
-        if transcript_file:
-            asr["transcript_file"] = transcript_file
-        if error_message:
-            asr["error"] = error_message
-        frontmatter["asr"] = asr
-        frontmatter["status"] = "usable" if status == "done" else frontmatter.get("status", "raw")
-        self._write_doc(metadata_path, frontmatter, body)
-        self.refresh_counts(slug)
-
-    def write_transcript(
-        self,
-        slug: str,
-        material_id_value: str,
-        transcript: str,
-        source_file: str,
-        model: str,
-    ) -> str:
-        path = self._skill_dir(slug) / "materials" / "transcripts" / f"{material_id_value}.md"
-        frontmatter = {
-            "id": material_id_value,
-            "type": "transcript",
-            "status": "usable",
-            "source_file": source_file,
-            "uploaded_at": utc_now(),
-            "topics": [],
-            "confidence": "medium",
-            "asr": {
-                "required": False,
-                "status": "done",
-                "model": model,
-                "transcript_type": "raw_asr",
-            },
-        }
-        self._write_doc(path, frontmatter, transcript.strip() + "\n")
-        self.refresh_counts(slug)
-        return self._relative(path)
 
     def refresh_counts(self, slug: str) -> None:
         skill_dir = self._skill_dir(slug)

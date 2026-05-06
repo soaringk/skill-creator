@@ -115,48 +115,23 @@ async def transcribe_text_draft(file: UploadFile = File(...)):
     return {"text": result.text, "request_id": result.request_id}
 
 
-@app.post("/api/skills/{slug}/materials/audio")
-async def add_audio_material(slug: str, file: UploadFile = File(...)):
-    try:
-        content = await file.read()
-        material = store.add_audio_material(slug, file.filename or "audio", content)
-    except StoreError as exc:
-        raise handle_store_error(exc) from exc
+@app.post("/api/asr/offline-text-draft")
+async def transcribe_offline_text_draft(file: UploadFile = File(...)):
+    from .asr import transcribe_with_dashscope_offline
+    content = await file.read()
+    suffix = Path(file.filename or "audio").suffix
+    with tempfile.NamedTemporaryFile(prefix="skill_creator_offline_draft_", suffix=suffix, delete=True) as temp_file:
+        temp_file.write(content)
+        temp_file.flush()
+        result = transcribe_with_dashscope_offline(
+            Path(temp_file.name),
+            api_key=settings.dashscope_api_key,
+            model="fun-asr",
+        )
+    return {"text": result.text, "request_id": result.request_id}
 
-    def task(job_id: str):
-        skill_dir = settings.context_root / slug
-        source_file = material.source_file
-        if not source_file:
-            raise RuntimeError("Audio material has no source_file")
-        try:
-            audio_path = skill_dir / source_file
-            result = transcribe_with_dashscope_realtime(
-                audio_path,
-                api_key=settings.dashscope_api_key,
-                model=settings.dashscope_model,
-                websocket_url=settings.dashscope_websocket_url,
-            )
-            transcript_file = store.write_transcript(
-                slug,
-                material.id,
-                result.text,
-                source_file=source_file,
-                model=settings.dashscope_model,
-            )
-            store.update_audio_asr(slug, material.id, "done", transcript_file=transcript_file)
-            draft(slug)
-            return {"transcript_file": transcript_file, "request_id": result.request_id}
-        except Exception as exc:
-            store.update_audio_asr(slug, material.id, "failed", error_message=str(exc))
-            raise
 
-    job = job_runner.enqueue(
-        kind="asr",
-        slug=slug,
-        message=f"Transcribing {material.id}",
-        task=task,
-    )
-    return {"material": material, "job": job}
+
 
 
 @app.post("/api/skills/{slug}/draft")

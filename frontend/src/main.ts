@@ -49,7 +49,6 @@ const state = {
   isRecording: false,
   textDraft: "",
   isModalOpen: false,
-  materialTab: 'text' as 'text' | 'file',
   isMobileListVisible: true,
   settingsOpen: false,
   isSidebarCollapsed: false,
@@ -206,18 +205,25 @@ async function transcribeFile(file: File): Promise<void> {
   }
 }
 
-async function addAudio(event: Event): Promise<void> {
-  event.preventDefault();
-  if (!state.selectedSlug) return;
-  const form = new FormData(event.currentTarget as HTMLFormElement);
-  await api<{ material: MaterialSummary; job: JobRecord }>(
-    `/api/skills/${state.selectedSlug}/materials/audio`,
-    {
+async function transcribeOfflineFile(file: File): Promise<void> {
+  state.transcribing = true;
+  state.error = "";
+  render();
+  try {
+    const payload = new FormData();
+    payload.set("file", file);
+    const result = await api<{ text: string; request_id?: string | null }>("/api/asr/offline-text-draft", {
       method: "POST",
-      body: form
-    }
-  );
-  await load();
+      body: payload
+    });
+    const current = state.textDraft.trim();
+    state.textDraft = current ? `${current}\n\n${result.text}` : result.text;
+  } catch (error) {
+    state.error = "Transcription failed: " + (error instanceof Error ? error.message : String(error));
+  } finally {
+    state.transcribing = false;
+    render();
+  }
 }
 
 async function action(path: string): Promise<void> {
@@ -332,51 +338,32 @@ function renderSkillCard(skill: SkillSummary): string {
 function renderAddMaterial(): string {
   return `
     <div class="card">
-      <div class="tabs">
-        <button type="button" class="tab ${state.materialTab === 'text' ? 'active' : ''}" data-tab="text">✍️ 文本输入</button>
-        <button type="button" class="tab ${state.materialTab === 'file' ? 'active' : ''}" data-tab="file">📁 上传音频</button>
-      </div>
+      <div class="area-header">1. 提供素材</div>
+      <form id="text-form">
+        <div class="asr-actions">
+          <button type="button" class="btn-record ${state.isRecording ? 'recording' : ''}" id="btn-record">
+            ${state.isRecording ? '🛑 停止录音' : '🎙️ 录音'}
+          </button>
+          <label class="btn-upload-asr">
+            📁 上传音频
+            <input type="file" id="asr-file" accept="audio/*,video/*" style="display: none;" />
+          </label>
+        </div>
 
-      <div>
-        ${state.materialTab === 'text' ? `
-          <form id="text-form">
-            <div class="asr-actions">
-              <button type="button" class="btn-record ${state.isRecording ? 'recording' : ''}" id="btn-record">
-                ${state.isRecording ? '🛑 停止录音' : '🎙️ 录音'}
-              </button>
-              <label class="btn-upload-asr">
-                📁 上传音频
-                <input type="file" id="asr-file" accept="audio/*,video/*" style="display: none;" />
-              </label>
-            </div>
+        ${state.transcribing ? `<div class="text-sm text-muted mb-2">正在识别语音，请稍候...</div>` : ''}
 
-            ${state.transcribing ? `<div class="text-sm text-muted mb-2">正在识别语音，请稍候...</div>` : ''}
+        <textarea name="text" id="text-material-body" rows="6" placeholder="识别结果将显示在此处。支持直接输入或粘贴文本。" required>${escapeHtml(state.textDraft)}</textarea>
 
-            <textarea name="text" id="text-material-body" rows="6" placeholder="识别结果将显示在此处。支持直接输入或粘贴文本。" required>${escapeHtml(state.textDraft)}</textarea>
-
-            <div class="mt-2" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.5); padding: 4px 4px 4px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.8);">
-              <label class="text-sm text-muted" style="white-space: nowrap; font-weight: 600;">素材权重:</label>
-              <select name="confidence" style="margin: 0; border: none; background: transparent; box-shadow: none; padding-left: 0;">
-                <option value="high">核心</option>
-                <option value="medium" selected>参考</option>
-                <option value="low">补充</option>
-              </select>
-            </div>
-            <button type="submit" class="btn-primary btn-full mt-3">保存文本</button>
-          </form>
-        ` : ''}
-
-        ${state.materialTab === 'file' ? `
-          <form id="audio-file-form">
-            <p class="text-muted text-sm mb-2 text-center">上传音频文件，后台将自动进行语音识别。</p>
-            <label class="file-drop-area">
-              <input type="file" name="file" accept="audio/*,video/*" required />
-              <div class="drop-msg">选择文件</div>
-            </label>
-            <button type="submit" class="btn-primary btn-full mt-2">上传音频</button>
-          </form>
-        ` : ''}
-      </div>
+        <div class="mt-2" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.5); padding: 4px 4px 4px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.8);">
+          <label class="text-sm text-muted" style="white-space: nowrap; font-weight: 600;">素材权重:</label>
+          <select name="confidence" style="margin: 0; border: none; background: transparent; box-shadow: none; padding-left: 0;">
+            <option value="high">核心</option>
+            <option value="medium" selected>参考</option>
+            <option value="low">补充</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary btn-full mt-3">保存文本</button>
+      </form>
     </div>
   `;
 }
@@ -395,27 +382,31 @@ function renderSkillDetail(detail: SkillDetail): string {
     </div>
 
     <div class="area-section input-area">
-      <div class="area-header">1. 提供素材</div>
       ${renderAddMaterial()}
     </div>
 
     <div class="area-section preview-area">
-      <div class="area-header">2. 审核与完善</div>
       <div class="card">
+        <div class="area-header">2. 审核与完善</div>
         <h2 class="card-title">素材 (${detail.materials.length})</h2>
         <div>
-          ${detail.materials.map(m => `
+          ${detail.materials.map(m => {
+            const firstLine = m.content ? m.content.split('\\n').find(l => l.trim().length > 0)?.replace(/^#+\\s*/, '').trim() : '';
+            const title = firstLine || m.type;
+            const displayTitle = title.length > 40 ? title.substring(0, 40) + '...' : title;
+            return `
             <div class="material-item">
-              <details class="material-preview-details">
+              <details>
                 <summary class="material-preview-summary">
-                  <div class="m-type">${escapeHtml(m.type)}</div>
+                  <div class="m-type" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(title)}">${escapeHtml(displayTitle)}</div>
                   <div class="badge ${m.status.toLowerCase()}">${escapeHtml(m.status)}</div>
                   <div class="m-id">${escapeHtml(m.id.substring(0,8))}</div>
                 </summary>
-                ${m.content ? `<pre class="code-block" style="margin-top: 10px;">${escapeHtml(m.content)}</pre>` : `<div class="text-muted text-sm mt-2 text-center">暂无内容。</div>`}
+                ${m.content ? '<pre class="code-block" style="margin-top: 10px;">' + escapeHtml(m.content) + '</pre>' : '<div class="text-muted text-sm mt-2 text-center">暂无内容。</div>'}
               </details>
             </div>
-          `).join('') || '<div class="text-muted text-sm text-center">暂无素材。</div>'}
+            `;
+          }).join('') || '<div class="text-muted text-sm text-center">暂无素材。</div>'}
         </div>
       </div>
 
@@ -429,8 +420,8 @@ function renderSkillDetail(detail: SkillDetail): string {
     </div>
 
     <div class="area-section test-area">
-      <div class="area-header">3. 测试与发布</div>
       <div class="card">
+        <div class="area-header">3. 测试与发布</div>
         <form id="use-skill">
           <textarea name="prompt" rows="3" placeholder="描述如何使用 Skill..." required></textarea>
           <select name="source" class="mt-2">
@@ -479,16 +470,8 @@ function attachListeners() {
     render();
   });
 
-  document.querySelectorAll<HTMLButtonElement>('.tab').forEach(tab => {
-    tab.addEventListener('click', (e) => {
-      state.materialTab = (e.currentTarget as HTMLElement).dataset.tab as any;
-      render();
-    });
-  });
-
   // Material Form Handlers
   document.querySelector<HTMLFormElement>('#text-form')?.addEventListener('submit', addText);
-  document.querySelector<HTMLFormElement>('#audio-file-form')?.addEventListener('submit', addAudio);
 
   // ASR Inline Handlers
   document.querySelector<HTMLButtonElement>('#btn-record')?.addEventListener('click', toggleRecording);
@@ -496,7 +479,7 @@ function attachListeners() {
   document.querySelector<HTMLInputElement>('#asr-file')?.addEventListener('change', (e) => {
     const target = e.target as HTMLInputElement;
     if (target.files?.length) {
-      void transcribeFile(target.files[0]);
+      void transcribeOfflineFile(target.files[0]);
       target.value = ""; // reset
     }
   });
@@ -534,18 +517,7 @@ function attachListeners() {
     render();
   });
 
-  // File Drop styling for standard file inputs
-  document.querySelectorAll<HTMLInputElement>('input[type="file"]:not(#asr-file)').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const target = e.target as HTMLInputElement;
-      const dropArea = target.closest('.file-drop-area');
-      const msg = dropArea?.querySelector('.drop-msg');
-      if (msg && target.files?.length) {
-        msg.textContent = target.files[0].name;
-        dropArea?.classList.add('has-file');
-      }
-    });
-  });
+
 }
 
 void load();
