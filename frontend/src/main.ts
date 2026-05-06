@@ -5,7 +5,6 @@ type SkillSummary = {
   title: string;
   status: string;
   target_category?: string | null;
-  material_count: number;
   updated_at?: string | null;
   rules_target?: string | null;
 };
@@ -50,6 +49,12 @@ type UseStreamEvent =
   | { type: "done" }
   | { type: "error"; message: string };
 
+type AsrStreamEvent =
+  | { type: "status"; message: string }
+  | { type: "text"; text: string; final?: boolean; request_id?: string | null }
+  | { type: "done" }
+  | { type: "error"; message: string };
+
 const state = {
   skills: [] as SkillSummary[],
   jobs: [] as JobRecord[],
@@ -69,9 +74,14 @@ const state = {
   publishToken: "",
 };
 
-// Global recording references
-let mediaRecorder: MediaRecorder | null = null;
-let audioChunks: BlobPart[] = [];
+let recordingSocket: WebSocket | null = null;
+let audioContext: AudioContext | null = null;
+let audioProcessor: ScriptProcessorNode | null = null;
+let audioSource: MediaStreamAudioSourceNode | null = null;
+let audioStream: MediaStream | null = null;
+let asrBaseText = "";
+let asrFinalText = "";
+let asrPartialText = "";
 let jobRefreshTimer: number | null = null;
 
 const root = document.querySelector<HTMLDivElement>("#app");
@@ -82,6 +92,12 @@ const apiBase = import.meta.env.BASE_URL;
 function apiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
   return `${apiBase}${normalizedPath}`;
+}
+
+function wsUrl(path: string): string {
+  const url = new URL(apiUrl(path), window.location.href);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString();
 }
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -107,7 +123,7 @@ function errorMessage(body: string, status: number): string {
   return body;
 }
 
-async function load(): Promise<void> {
+async function load(options: { preserveScroll?: boolean } = {}): Promise<void> {
   try {
     const [skills, jobs] = await Promise.all([
       api<SkillSummary[]>("/api/skills"),
@@ -127,7 +143,7 @@ async function load(): Promise<void> {
   } catch (error) {
     state.error = error instanceof Error ? error.message : String(error);
   }
-  render();
+  render({ preserveScroll: options.preserveScroll });
   scheduleJobRefresh();
 }
 
@@ -139,7 +155,7 @@ function scheduleJobRefresh(): void {
   if (!state.jobs.some(job => job.status === "queued" || job.status === "running")) return;
   jobRefreshTimer = window.setTimeout(() => {
     jobRefreshTimer = null;
-    void load();
+    void load({ preserveScroll: true });
   }, 2000);
 }
 
@@ -186,59 +202,103 @@ async function addText(event: Event): Promise<void> {
 }
 
 async function toggleRecording(): Promise<void> {
-  if (state.isRecording && mediaRecorder) {
-    mediaRecorder.stop();
-    state.isRecording = false;
-    render();
+  if (state.isRecording) {
+    stopRealtimeRecording();
     return;
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = async () => {
-      const mimeType = mediaRecorder?.mimeType || 'audio/webm';
-      const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
-      const audioBlob = new Blob(audioChunks, { type: mimeType });
-      const file = new File([audioBlob], `recording.${ext}`, { type: mimeType });
-      await transcribeFile(file);
-      stream.getTracks().forEach(track => track.stop());
-    };
-
-    mediaRecorder.start();
-    state.isRecording = true;
-    render();
+    await startRealtimeRecording();
   } catch (err) {
     state.error = "Microphone access denied or unavailable. " + (err instanceof Error ? err.message : String(err));
+    cleanupRealtimeRecording();
     render();
   }
 }
 
-async function transcribeFile(file: File): Promise<void> {
-  state.transcribing = true;
+async function startRealtimeRecording(): Promise<void> {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) throw new Error("浏览器不支持实时录音。");
+
+  audioStream = stream;
+  audioContext = new AudioContextClass();
+  audioSource = audioContext.createMediaStreamSource(stream);
+  audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+  recordingSocket = new WebSocket(wsUrl("/api/asr/realtime"));
+  recordingSocket.binaryType = "arraybuffer";
+
+  resetAsrDraft();
   state.error = "";
+  state.transcribing = true;
+  state.isRecording = true;
   render();
-  try {
-    const payload = new FormData();
-    payload.set("file", file);
-    const result = await api<{ text: string; request_id?: string | null }>("/api/asr/text-draft", {
-      method: "POST",
-      body: payload
-    });
-    const current = state.textDraft.trim();
-    state.textDraft = current ? `${current}\n\n${result.text}` : result.text;
-  } catch (error) {
-    state.error = "Transcription failed: " + (error instanceof Error ? error.message : String(error));
-  } finally {
-    state.transcribing = false;
+
+  recordingSocket.onopen = () => {
+    if (!audioContext || !audioSource || !audioProcessor) return;
+    audioProcessor.onaudioprocess = (event) => {
+      if (!recordingSocket || recordingSocket.readyState !== WebSocket.OPEN || !audioContext) return;
+      const pcm = floatTo16BitPcm(downsample(event.inputBuffer.getChannelData(0), audioContext.sampleRate, 16000));
+      event.outputBuffer.getChannelData(0).fill(0);
+      if (pcm.byteLength > 0) recordingSocket.send(pcm);
+    };
+    audioSource.connect(audioProcessor);
+    audioProcessor.connect(audioContext.destination);
+  };
+  recordingSocket.onmessage = (event) => {
+    try {
+      handleAsrEvent(JSON.parse(String(event.data)) as AsrStreamEvent);
+    } catch (error) {
+      state.error = "Transcription failed: " + (error instanceof Error ? error.message : String(error));
+      state.transcribing = false;
+      state.isRecording = false;
+      cleanupRealtimeRecording();
+    }
     render();
+  };
+  recordingSocket.onerror = () => {
+    state.error = "实时识别连接失败。";
+    state.transcribing = false;
+    state.isRecording = false;
+    cleanupRealtimeRecording();
+    render();
+  };
+  recordingSocket.onclose = () => {
+    state.isRecording = false;
+    state.transcribing = false;
+    cleanupRealtimeRecording(false);
+    render();
+  };
+}
+
+function stopRealtimeRecording(): void {
+  state.isRecording = false;
+  state.transcribing = true;
+  audioProcessor?.disconnect();
+  audioSource?.disconnect();
+  audioStream?.getTracks().forEach(track => track.stop());
+  if (recordingSocket?.readyState === WebSocket.OPEN) {
+    recordingSocket.send("stop");
+  } else {
+    cleanupRealtimeRecording();
+    state.transcribing = false;
   }
+  render();
+}
+
+function cleanupRealtimeRecording(closeSocket = true): void {
+  audioProcessor?.disconnect();
+  audioSource?.disconnect();
+  audioStream?.getTracks().forEach(track => track.stop());
+  void audioContext?.close().catch(() => undefined);
+  if (closeSocket && recordingSocket && recordingSocket.readyState < WebSocket.CLOSING) {
+    recordingSocket.close();
+  }
+  audioProcessor = null;
+  audioSource = null;
+  audioStream = null;
+  audioContext = null;
+  recordingSocket = null;
 }
 
 async function transcribeOfflineFile(file: File): Promise<void> {
@@ -249,22 +309,111 @@ async function transcribeOfflineFile(file: File): Promise<void> {
   }
   state.transcribing = true;
   state.error = "";
+  resetAsrDraft();
   render();
   try {
     const payload = new FormData();
     payload.set("file", file);
-    const result = await api<{ text: string; request_id?: string | null }>("/api/asr/offline-text-draft", {
+    const response = await fetch(apiUrl("/api/asr/text-draft/stream"), {
       method: "POST",
       body: payload
     });
-    const current = state.textDraft.trim();
-    state.textDraft = current ? `${current}\n\n${result.text}` : result.text;
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(errorMessage(text, response.status));
+    }
+    if (!response.body) throw new Error("浏览器不支持流式响应。");
+    await readAsrStream(response.body);
   } catch (error) {
     state.error = "Transcription failed: " + (error instanceof Error ? error.message : String(error));
   } finally {
     state.transcribing = false;
     render();
   }
+}
+
+function resetAsrDraft(): void {
+  asrBaseText = state.textDraft.trim();
+  asrFinalText = "";
+  asrPartialText = "";
+}
+
+function handleAsrEvent(event: AsrStreamEvent): void {
+  if (event.type === "status") return;
+  if (event.type === "error") throw new Error(event.message);
+  if (event.type === "done") {
+    asrPartialText = "";
+    applyAsrDraft();
+    return;
+  }
+  if (event.type === "text") {
+    if (event.final) {
+      asrFinalText = joinText(asrFinalText, event.text);
+      asrPartialText = "";
+    } else {
+      asrPartialText = event.text;
+    }
+    applyAsrDraft();
+  }
+}
+
+function applyAsrDraft(): void {
+  const transcript = joinText(asrFinalText, asrPartialText);
+  state.textDraft = joinText(asrBaseText, transcript);
+}
+
+function joinText(left: string, right: string): string {
+  const a = left.trim();
+  const b = right.trim();
+  if (!a) return b;
+  if (!b) return a;
+  return `${a}\n\n${b}`;
+}
+
+async function readAsrStream(body: ReadableStream<Uint8Array>): Promise<void> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (line.trim()) handleAsrEvent(JSON.parse(line) as AsrStreamEvent);
+    }
+    render();
+    if (done) break;
+  }
+  if (buffer.trim()) {
+    handleAsrEvent(JSON.parse(buffer) as AsrStreamEvent);
+    render();
+  }
+}
+
+function downsample(input: Float32Array, sourceRate: number, targetRate: number): Float32Array {
+  if (sourceRate === targetRate) return input;
+  const ratio = sourceRate / targetRate;
+  const length = Math.floor(input.length / ratio);
+  const output = new Float32Array(length);
+  for (let i = 0; i < length; i += 1) {
+    const start = Math.floor(i * ratio);
+    const end = Math.min(Math.floor((i + 1) * ratio), input.length);
+    let sum = 0;
+    for (let j = start; j < end; j += 1) sum += input[j];
+    output[i] = sum / Math.max(1, end - start);
+  }
+  return output;
+}
+
+function floatTo16BitPcm(input: Float32Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(input.length * 2);
+  const view = new DataView(buffer);
+  for (let i = 0; i < input.length; i += 1) {
+    const sample = Math.max(-1, Math.min(1, input[i]));
+    view.setInt16(i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+  return buffer;
 }
 
 async function publishSkill(): Promise<void> {
@@ -314,7 +463,9 @@ async function useSkill(event: Event): Promise<void> {
   }
 }
 
-function render(): void {
+function render(options: { preserveScroll?: boolean } = {}): void {
+  const mainContent = document.querySelector<HTMLElement>(".main-content");
+  const previousScrollTop = options.preserveScroll ? mainContent?.scrollTop : undefined;
   app.innerHTML = `
     <div class="app-layout">
       <nav class="mobile-nav">
@@ -387,6 +538,10 @@ function render(): void {
   `;
 
   attachListeners();
+  if (previousScrollTop !== undefined) {
+    const nextMainContent = document.querySelector<HTMLElement>(".main-content");
+    if (nextMainContent) nextMainContent.scrollTop = previousScrollTop;
+  }
 }
 
 function renderSkillCard(skill: SkillSummary): string {
@@ -445,7 +600,7 @@ function renderSkillDetail(detail: SkillDetail): string {
       <h1 class="title">${escapeHtml(detail.summary.title)}</h1>
       <div class="meta">
         <span class="badge ${statusClass}">${escapeHtml(detail.summary.status)}</span>
-        <span class="text-sm">${detail.summary.material_count} 个素材</span>
+        <span class="text-sm">${detail.materials.length} 个素材</span>
       </div>
     </div>
 
@@ -528,7 +683,7 @@ function renderSkillStatus(detail: SkillDetail): string {
         </details>
         ${draft.review ? `
         <details class="mt-2">
-          <summary>评审备注</summary>
+          <summary>评审意见</summary>
           <pre class="draft-block">${escapeHtml(draft.review)}</pre>
         </details>
         ` : ''}

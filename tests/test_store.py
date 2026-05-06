@@ -19,7 +19,6 @@ def make_context(root: Path) -> None:
                 "title": None,
                 "status": "collecting",
                 "target_category": "Workflow",
-                "material_count": 0,
             },
             "# Candidate Skill\n",
         ),
@@ -52,7 +51,7 @@ def test_create_skill_and_add_text_material(tmp_path: Path) -> None:
 
     assert summary.slug == "demo_skill"
     assert material.type == "text"
-    assert detail.summary.material_count == 1
+    assert len(detail.materials) == 1
     skill_dir = tmp_path / "contexts" / "skill_creator" / "demo_skill"
     material_doc = parse_markdown(next((skill_dir / "materials").glob("*.md")).read_text(encoding="utf-8"))
     assert set(material_doc.frontmatter) == {"id", "type", "uploaded_at", "confidence"}

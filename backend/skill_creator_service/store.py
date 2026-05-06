@@ -74,7 +74,6 @@ class SkillStore:
             title=str(frontmatter.get("title") or slug),
             status=str(frontmatter.get("status") or "unknown"),
             target_category=frontmatter.get("target_category"),
-            material_count=int(frontmatter.get("material_count") or 0),
             updated_at=str(frontmatter.get("updated_at") or "") or None,
             rules_target=frontmatter.get("rules_target"),
         )
@@ -137,10 +136,8 @@ class SkillStore:
             "rules_target": None,
             "created_at": now,
             "updated_at": now,
-            "material_count": 0,
         }
         self._write_doc(skill_dir / "index.md", frontmatter, body)
-        self.refresh_counts(slug)
         summary = self._load_summary(skill_dir)
         if not summary:
             raise StoreError("Skill candidate was created but index could not be read.")
@@ -218,19 +215,17 @@ class SkillStore:
             "confidence": confidence,
         }
         self._write_doc(path, frontmatter, text.strip() + "\n")
-        self.refresh_counts(slug)
+        self.touch_index(slug)
         return self._material_from_path(path)
 
 
 
-    def refresh_counts(self, slug: str) -> None:
+    def touch_index(self, slug: str) -> None:
         skill_dir = self._skill_dir(slug)
         index_path = skill_dir / "index.md"
         frontmatter, body = self._read_doc(index_path)
         if not frontmatter:
             return
-        materials = self.list_materials(slug)
-        frontmatter["material_count"] = len(materials)
         frontmatter["updated_at"] = utc_now()
         self._write_doc(index_path, frontmatter, body)
 

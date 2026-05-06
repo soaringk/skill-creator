@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
     [apiProxyPath]: {
       target: "http://127.0.0.1:8010",
       changeOrigin: true,
+      ws: true,
       rewrite: (requestPath: string) =>
         basePrefix ? requestPath.slice(basePrefix.length) : requestPath
     }

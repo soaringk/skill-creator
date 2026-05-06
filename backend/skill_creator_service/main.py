@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json
+import queue
 import tempfile
 from pathlib import Path
 from typing import Any, Iterator
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from .asr import transcribe_with_dashscope_realtime
+from .asr import drain_events, start_dashscope_realtime, stream_transcribe_with_dashscope_realtime
 from .audio_uploads import AudioUploadError, validate_audio_container, validated_audio_suffix
 from .config import load_settings
 from .jobs import JobRunner, JobStore
@@ -109,44 +110,81 @@ def add_text_material(slug: str, request: TextMaterialRequest):
         raise handle_store_error(exc) from exc
 
 
-@app.post("/api/asr/text-draft")
-async def transcribe_text_draft(file: UploadFile = File(...)):
+@app.post("/api/asr/text-draft/stream")
+async def transcribe_text_draft_stream(file: UploadFile = File(...)):
     content = await file.read()
-    content, suffix = read_valid_audio_upload(file, content)
-    with tempfile.NamedTemporaryFile(prefix="skill_creator_text_draft_", suffix=suffix, delete=True) as temp_file:
-        temp_file.write(content)
-        temp_file.flush()
+
+    def events() -> Iterator[str]:
         try:
-            validate_audio_container(Path(temp_file.name))
-        except AudioUploadError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        result = transcribe_with_dashscope_realtime(
-            Path(temp_file.name),
+            yield from stream_uploaded_audio(file, content, prefix="skill_creator_text_stream_")
+        except HTTPException as exc:
+            yield json_line({"type": "error", "message": str(exc.detail)})
+
+    return StreamingResponse(events(), media_type="application/x-ndjson")
+
+
+@app.websocket("/api/asr/realtime")
+async def transcribe_realtime_socket(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        events: queue.Queue[dict[str, str | bool | None]] = queue.Queue()
+        recognition, close = start_dashscope_realtime(
             api_key=settings.dashscope_api_key,
             model=settings.dashscope_model,
             websocket_url=settings.dashscope_websocket_url,
+            emit=events.put,
         )
-    return {"text": result.text, "request_id": result.request_id}
+        await websocket.send_json({"type": "status", "message": "正在识别"})
+    except RuntimeError as exc:
+        await websocket.send_json({"type": "error", "message": str(exc)})
+        await websocket.close()
+        return
+
+    disconnected = False
+    try:
+        while True:
+            message = await websocket.receive()
+            if message.get("bytes") is not None:
+                recognition.send_audio_frame(message["bytes"])
+                for event in drain_events(events):
+                    await websocket.send_json(event)
+                continue
+            if message.get("text") == "stop":
+                break
+    except WebSocketDisconnect:
+        disconnected = True
+        return
+    finally:
+        try:
+            recognition.stop()
+            if not disconnected:
+                for event in drain_events(events, wait_seconds=1.0):
+                    await websocket.send_json(event)
+                await websocket.send_json({"type": "done"})
+                await websocket.close()
+        finally:
+            close()
 
 
-@app.post("/api/asr/offline-text-draft")
-async def transcribe_offline_text_draft(file: UploadFile = File(...)):
-    from .asr import transcribe_with_dashscope_offline
-    content = await file.read()
+def stream_uploaded_audio(file: UploadFile, content: bytes, *, prefix: str) -> Iterator[str]:
     content, suffix = read_valid_audio_upload(file, content)
-    with tempfile.NamedTemporaryFile(prefix="skill_creator_offline_draft_", suffix=suffix, delete=True) as temp_file:
+    with tempfile.NamedTemporaryFile(prefix=prefix, suffix=suffix, delete=True) as temp_file:
         temp_file.write(content)
         temp_file.flush()
         try:
             validate_audio_container(Path(temp_file.name))
+            yield json_line({"type": "status", "message": "正在解析音频"})
+            for event in stream_transcribe_with_dashscope_realtime(
+                Path(temp_file.name),
+                api_key=settings.dashscope_api_key,
+                model=settings.dashscope_model,
+                websocket_url=settings.dashscope_websocket_url,
+            ):
+                yield json_line(event)
         except AudioUploadError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        result = transcribe_with_dashscope_offline(
-            Path(temp_file.name),
-            api_key=settings.dashscope_api_key,
-            model="fun-asr",
-        )
-    return {"text": result.text, "request_id": result.request_id}
+        except RuntimeError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 
@@ -173,17 +211,6 @@ def promote(slug: str):
         return {"target": str(target)}
     except StoreError as exc:
         raise handle_store_error(exc) from exc
-
-
-@app.post("/api/skills/{slug}/use")
-def use_skill(slug: str, request: UseSkillRequest):
-    session_id, prompt = prepare_skill_use(slug, request)
-    response = opencode.send_message(
-        session_id,
-        prompt,
-        agent="skill-use",
-    )
-    return {"session_id": session_id, "response": response}
 
 
 @app.post("/api/skills/{slug}/use/stream")

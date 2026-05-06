@@ -30,7 +30,6 @@ target_category: Workflow
 rules_target:
 created_at: 2026-04-28
 updated_at: 2026-04-28
-material_count: 0
 ---
 ```
 
@@ -65,8 +64,9 @@ confidence: medium
 
 音频处理规则：
 
-- 录音走 realtime ASR。
-- 上传文件走离线 ASR。
+- 录音和上传音频都走 realtime ASR。
+- 录音通过 WebSocket 发送 16 kHz PCM frames，边说边更新文本草稿。
+- 上传音频通过流式 HTTP 响应返回 ASR 增量，边解析边更新文本草稿。
 - 前端只允许选择 `audio/*`。
 - 后端先校验 content type、扩展名和文件头，再用 `ffprobe` 确认临时文件只有 audio stream；非音频、混入视频或畸形文件直接拒绝并删除临时文件。
 
@@ -87,17 +87,17 @@ Web 服务直接映射到当前文件状态机：
 
 - `GET /api/skills`: 读取所有 `*/index.md` frontmatter
 - `POST /api/skills`: 从 `_template/` 创建新候选目录
-- `POST /api/asr/text-draft`: 录音 realtime ASR，返回文本草稿
-- `POST /api/asr/offline-text-draft`: 上传音频离线 ASR，返回文本草稿
+- `POST /api/asr/text-draft/stream`: 上传音频 realtime ASR，流式返回文本草稿
+- `WS /api/asr/realtime`: 录音 realtime ASR，流式返回文本草稿
 - `POST /api/skills/:slug/materials/text`: 创建 `materials/<material_id>.md`
 - `POST /api/skills/:slug/draft`: 根据已保存材料生成或刷新 `draft.md`
 - `POST /api/skills/:slug/promote`: 经过 admin token 校验后写入 `rules/skills/`，更新 `rules/skills/INDEX.md` 和 `published.md`
-- `POST /api/skills/:slug/use`: 使用 draft 或 published 内容进行只读对话
+- `POST /api/skills/:slug/use/stream`: 使用 draft 或 published 内容进行只读流式对话
 
 ## 自动蒸馏规则
 
 自动化可以主动生成草案，但晋升到 `rules/skills/` 必须经过 admin token 校验。默认门槛：
 
-- `material_count >= 2`，或存在一份完整高质量 transcript
+- 至少两份已保存素材，或存在一份完整高质量 transcript
 - `draft.md` 的 `Publishable Skill` 能清楚说明触发条件、流程、边界和失败模式
 - `Draft Review` 能明确说明素材覆盖和继续完善方向

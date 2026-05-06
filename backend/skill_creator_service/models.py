@@ -13,7 +13,6 @@ class SkillSummary(BaseModel):
     title: str
     status: str
     target_category: str | None = None
-    material_count: int = 0
     updated_at: str | None = None
     rules_target: str | None = None
 

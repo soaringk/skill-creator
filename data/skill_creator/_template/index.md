@@ -6,7 +6,6 @@ target_category: Workflow
 rules_target:
 created_at:
 updated_at:
-material_count: 0
 ---
 
 # Candidate Skill
