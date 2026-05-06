@@ -16,6 +16,7 @@ class SkillSummary(BaseModel):
     material_count: int = 0
     usable_material_count: int = 0
     updated_at: str | None = None
+    rules_target: str | None = None
 
 
 class MaterialSummary(BaseModel):
@@ -34,7 +35,7 @@ class SkillDetail(BaseModel):
     index_body: str
     materials: list[MaterialSummary]
     draft: str
-    proposal: str
+    promoted: str | None = None
 
 
 class CreateSkillRequest(BaseModel):

@@ -77,6 +77,7 @@ class SkillStore:
             material_count=int(frontmatter.get("material_count") or 0),
             usable_material_count=int(frontmatter.get("usable_material_count") or 0),
             updated_at=str(frontmatter.get("updated_at") or "") or None,
+            rules_target=frontmatter.get("rules_target"),
         )
 
     def list_skills(self) -> list[SkillSummary]:
@@ -134,8 +135,6 @@ class SkillStore:
             "title": title,
             "status": "collecting",
             "target_category": target_category,
-            "promotion_intent": "auto_propose",
-            "requires_user_confirmation": True,
             "rules_target": None,
             "created_at": now,
             "updated_at": now,
@@ -158,13 +157,18 @@ class SkillStore:
             raise StoreError(f"Missing index.md for skill candidate: {slug}")
         _, index_body = self._read_doc(skill_dir / "index.md")
         _, draft = self._read_doc(skill_dir / "draft.md")
-        _, proposal = self._read_doc(skill_dir / "proposal.md")
+        promoted = None
+        if summary.rules_target:
+            target_path = Path(summary.rules_target)
+            if target_path.exists():
+                promoted = target_path.read_text(encoding="utf-8")
+
         return SkillDetail(
             summary=summary,
             index_body=index_body,
             materials=self.list_materials(slug),
             draft=draft,
-            proposal=proposal,
+            promoted=promoted,
         )
 
     def list_materials(self, slug: str) -> list[MaterialSummary]:
@@ -244,16 +248,6 @@ class SkillStore:
         frontmatter["updated_at"] = utc_now()
         frontmatter.update(updates)
         self._write_doc(index_path, frontmatter, body)
-
-    def approve(self, slug: str) -> None:
-        proposal_path = self._skill_dir(slug) / "proposal.md"
-        frontmatter, body = self._read_doc(proposal_path)
-        if not frontmatter:
-            raise StoreError(f"Missing proposal.md for skill candidate: {slug}")
-        frontmatter["decision"] = "approved"
-        frontmatter["decided_at"] = utc_now()
-        self._write_doc(proposal_path, frontmatter, body)
-        self.set_index_status(slug, "approved")
 
     def _material_from_path(self, path: Path) -> MaterialSummary:
         frontmatter, body = self._read_doc(path)

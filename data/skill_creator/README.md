@@ -9,17 +9,12 @@ data/skill_creator/
 ├── _template/
 └── <skill_slug>/
     ├── index.md
-    ├── materials/
-    │   ├── text/
-    │   ├── audio/
-    │   │   ├── <material_id>.md
-    │   │   └── uploads/
-    │   └── transcripts/
     ├── draft.md
-    └── proposal.md
+    └── materials/
+        └── <material_id>.md
 ```
 
-`index.md` 是候选 skill 的唯一状态入口。`materials/text/` 存放人工收集的纯文本。`materials/audio/uploads/` 存放录音等原始音频，`materials/audio/<material_id>.md` 记录音频元信息和 ASR 状态。ASR 生成的纯文本放到 `materials/transcripts/`。每份可用于提炼的文本都用 markdown frontmatter 记录元信息。
+`index.md` 是候选 skill 的唯一状态入口。`materials/` 存放收集的素材 markdown 文件。每份可用于提炼的素材都用 markdown frontmatter 记录元信息。
 
 ## Candidate Frontmatter
 
@@ -31,8 +26,6 @@ slug: workflow_example_skill
 title: Example Skill
 status: collecting
 target_category: Workflow
-promotion_intent: auto_propose
-requires_user_confirmation: true
 rules_target:
 created_at: 2026-04-28
 updated_at: 2026-04-28
@@ -46,10 +39,7 @@ usable_material_count: 0
 - `collecting`: 继续收集材料
 - `ready_to_draft`: 服务根据材料事实判断已足够，等待自动蒸馏
 - `drafted`: 已生成 `draft.md`
-- `proposed`: 已生成 `proposal.md`，等待用户确认
-- `approved`: 用户确认，可以晋升
 - `promoted`: 已写入 `rules/skills/`
-- `archived`: 停止处理
 
 ## Material Frontmatter
 

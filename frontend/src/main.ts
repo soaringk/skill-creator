@@ -8,6 +8,7 @@ type SkillSummary = {
   material_count: number;
   usable_material_count: number;
   updated_at?: string | null;
+  rules_target?: string | null;
 };
 
 type MaterialSummary = {
@@ -26,7 +27,7 @@ type SkillDetail = {
   index_body: string;
   materials: MaterialSummary[];
   draft: string;
-  proposal: string;
+  promoted?: string | null;
 };
 
 type JobRecord = {
@@ -412,10 +413,16 @@ function renderSkillDetail(detail: SkillDetail): string {
 
       <div class="card mt-3">
         <h2 class="card-title">Skill 状态</h2>
-        <details>
+        <details open>
           <summary>查看 Draft</summary>
           <pre class="code-block">${escapeHtml(detail.draft || "暂无 Draft。")}</pre>
         </details>
+        ${detail.promoted ? `
+        <details class="mt-2">
+          <summary>查看已发布版本</summary>
+          <pre class="code-block">${escapeHtml(detail.promoted)}</pre>
+        </details>
+        ` : ''}
       </div>
     </div>
 

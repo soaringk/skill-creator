@@ -83,7 +83,7 @@ def draft_prompt(slug: str, context_root: Path) -> str:
 
 Work only inside `{context_root / slug}`.
 
-Read `index.md` and all usable materials under `materials/text/` and `materials/transcripts/`.
+Read `index.md` and all materials under `materials/`.
 Update `draft.md` with a concise reusable skill draft covering:
 - when to use
 - workflow
@@ -92,22 +92,4 @@ Update `draft.md` with a concise reusable skill draft covering:
 
 Also update `index.md` status to `drafted` if the draft is meaningfully populated.
 Do not promote the skill and do not modify unrelated files.
-"""
-
-
-def propose_prompt(slug: str, context_root: Path, rules_root: Path) -> str:
-    return f"""Create a promotion proposal for candidate `{slug}`.
-
-Work only inside `{context_root / slug}`.
-
-Read `index.md`, `draft.md`, and usable materials. Update `proposal.md` with:
-- summary of the skill
-- proposed target file under `{rules_root}`
-- evidence from materials
-- expected behavior impact
-- pending user decision
-
-Set proposal frontmatter status to `proposed` and decision to `pending`.
-Update `index.md` status to `proposed`.
-Do not write to `{rules_root}` yet.
 """
