@@ -8,7 +8,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _expand_path(value: str) -> Path:
-    return Path(value).expanduser().resolve()
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    return Path(os.path.abspath(path))
 
 
 def load_dotenv(path: Path = PROJECT_ROOT / ".env") -> None:
