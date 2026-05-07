@@ -23,6 +23,9 @@ export function AddMaterial({
   textDraft,
   transcribing,
 }: AddMaterialProps) {
+  const polishDisabled = polishing || transcribing || !textDraft.trim();
+  const showPolishHint = !textDraft.trim();
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await onSubmit(new FormData(event.currentTarget));
@@ -65,7 +68,7 @@ export function AddMaterial({
         />
 
         <div className="confidence-row mt-2">
-          <label className="confidence-label">素材权重:</label>
+          <span className="confidence-label">素材权重:</span>
           <select name="confidence" className="confidence-select" defaultValue="medium">
             <option value="high">核心</option>
             <option value="medium">参考</option>
@@ -73,14 +76,20 @@ export function AddMaterial({
           </select>
         </div>
         <div className="material-actions mt-3">
-          <button
-            type="button"
-            className="btn-secondary"
-            disabled={polishing || transcribing || !textDraft.trim()}
-            onClick={onPolishText}
+          <span
+            className={`polish-control ${polishDisabled ? "disabled" : ""}`}
+            tabIndex={polishDisabled ? 0 : -1}
           >
-            {polishing ? "润色中..." : "润色"}
-          </button>
+            <button
+              type="button"
+              className="btn-secondary polish-button"
+              disabled={polishDisabled}
+              onClick={onPolishText}
+            >
+              {polishing ? "润色中..." : "润色"}
+            </button>
+            {showPolishHint ? <span className="polish-hint">缺少文本</span> : null}
+          </span>
           <button type="submit" className="btn-primary" disabled={polishing || transcribing}>记录</button>
         </div>
       </form>

@@ -14,6 +14,7 @@
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
   --glass-shadow: 0 12px 40px rgba(31, 38, 135, 0.1);
   --glass-shadow-sm: 0 4px 16px rgba(31, 38, 135, 0.05);
+  --select-arrow: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231d1d1f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
 * { box-sizing: border-box; }
@@ -301,18 +302,18 @@ input, select, textarea {
   box-sizing: border-box;
   font-family: inherit;
   appearance: none;
-  transition: all 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
 }
 input:focus, select:focus, textarea:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.9);
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
 }
 textarea { resize: vertical; }
 select {
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: var(--select-arrow);
   background-repeat: no-repeat;
   background-position: right 16px center;
   background-size: 16px;
@@ -352,6 +353,14 @@ select {
 }
 .btn-secondary:hover { background: rgba(255, 255, 255, 0.9); }
 .btn-full { width: 100%; display: block; }
+
+.btn-secondary.polish-button:disabled {
+  background: linear-gradient(180deg, rgba(255,255,255,0.44), rgba(238,242,247,0.28));
+  border-color: rgba(255,255,255,0.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.78), 0 3px 10px rgba(99, 115, 129, 0.04);
+  color: rgba(108, 119, 132, 0.62);
+  opacity: 1;
+}
 
 .error-banner,
 .job-banner {
@@ -461,12 +470,7 @@ select {
 }
 
 .confidence-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  min-height: 54px;
-  padding: 4px 8px 4px 14px;
+  position: relative;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255,255,255,0.72);
   background: rgba(255,255,255,0.48);
@@ -477,29 +481,88 @@ select {
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 700;
+  left: 14px;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   white-space: nowrap;
+  z-index: 1;
 }
 
 .confidence-select {
-  height: 44px;
-  margin: 0;
-  padding: 0 34px 0 0;
-  border: none;
-  border-radius: 10px;
   background-color: transparent;
+  background-image: var(--select-arrow);
+  background-position: right 44px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  border: none;
+  border-radius: var(--radius-sm);
   box-shadow: none;
+  cursor: pointer;
+  height: 54px;
+  margin: 0;
+  padding: 0 44px 0 118px;
   font-weight: 700;
 }
 
 .confidence-select:focus {
-  background-color: rgba(255,255,255,0.5);
-  box-shadow: none;
+  background-color: rgba(255,255,255,0.28);
 }
 
 .material-actions {
   display: grid;
   grid-template-columns: minmax(120px, 0.42fr) minmax(140px, 0.58fr);
   gap: 12px;
+}
+
+.polish-control {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+
+.polish-control:focus {
+  outline: none;
+}
+
+.polish-button {
+  width: 100%;
+}
+
+.polish-hint {
+  background: rgba(255,255,255,0.64);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.72);
+  border-radius: 999px;
+  box-shadow: var(--glass-shadow-sm), inset 0 1px 0 rgba(255,255,255,0.82);
+  color: rgba(101, 113, 128, 0.58);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  left: 50%;
+  line-height: 1.2;
+  opacity: 0;
+  padding: 5px 9px;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  top: -8px;
+  transform: translate(-50%, -100%);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  white-space: nowrap;
+  width: max-content;
+  z-index: 2;
+}
+
+.polish-control.disabled:hover .polish-hint,
+.polish-control.disabled:focus .polish-hint,
+.polish-control.disabled:focus-within .polish-hint {
+  opacity: 1;
+  transform: translate(-50%, calc(-100% - 2px));
 }
 
 @media (max-width: 520px) {
