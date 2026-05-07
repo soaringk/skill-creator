@@ -8,11 +8,12 @@
 - The public `/tools/skill-creator/` surface is intentionally unauthenticated for toy-app usability. Do not pretend the frontend protects the API.
 - Never expose OpenCode `/session/*`, `/prompt`, `/prompt_async`, shell-capable agent endpoints, provider credentials, or filesystem credentials through public nginx routes.
 - Promotion still requires `SKILL_CREATOR_ADMIN_TOKEN`; do not silently allow promotion when the token is unset.
-- Do not require the admin token for non-promotion operations. Candidate creation, material collection, ASR, drafting, testing, and read-only skill use must remain unprivileged.
+- Do not require the admin token for non-promotion operations. Candidate creation, material collection, text polishing, ASR, drafting, testing, and read-only skill use must remain unprivileged.
 - Maintain the configured candidate folder model, allowing for a standalone deployment defaulting to local `data/`.
 - Treat `draft.md` review sections as review metadata. Runtime use and promotion should operate on the `# Publishable Skill` section when present.
 - Keep `# Publishable Skill` and `# Draft Review` as stable draft parsing boundaries. Do not repeat candidate titles in `draft.md`.
 - Keep material metadata minimal. Do not reintroduce derived fields such as `material_count` when the frontend can render from the material array.
+- Treat text polishing like ASR-to-draft: provider output may update the editable text draft, but it must not create material files until the user explicitly records the text.
 - Validate uploaded files before ASR processing. The frontend should select only `audio/*`; the backend must still check content type, extension, file signature, and `ffprobe` stream shape, then delete rejected temporary files.
 - Forward websocket upgrade headers in the public API proxy because realtime ASR uses `WS /api/asr/realtime`.
 - Surface OpenCode server connection failures in the UI and clear stale failure messages after a successful refresh.
@@ -26,7 +27,7 @@
 
 ## Working Rules
 
-- Prefer TypeScript for frontend implementation and Python for backend integrations where it reduces ASR/runtime risk.
+- Use Vite + React + TypeScript for frontend implementation. Do not reintroduce whole-page string-template rendering for interactive flows.
 - For normal user UX, hide pipeline internals behind clear flows: collect material, review draft, publish, use skill.
 - Follow the established glassmorphism visual language for frontend work: translucent panels, blur, clear borders, stable spacing, and no flat bars that cover content.
 - Keep Chinese UI copy concise and useful. Avoid exposing process words such as "Draft running" when a simple Chinese status is clearer.

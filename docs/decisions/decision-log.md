@@ -5,9 +5,11 @@
 - Canonical skill-candidate state remains in the configured context root (defaulting to local `data/`). This avoids external dependencies for the core workflow and allows the service to operate as a standalone tool.
 - FastAPI is the backend despite a TypeScript frontend preference because DashScope realtime ASR and existing local automation are Python-friendly. OpenCode is accessed over HTTP, so the TypeScript SDK is not required for V1.
 - Text Material has two entry paths: direct paste and ASR-to-draft. The ASR-to-draft endpoint returns transcript text to the UI but does not create candidate material until the user explicitly saves the text.
+- Text polishing is also a pre-save text-draft operation. The backend calls DashScope's OpenAI-compatible chat completion endpoint and returns edited text to the UI without creating candidate material.
 - Audio upload and recording are transcript-entry paths, not persisted raw material types. Both produce editable text in the material text box; only saved text becomes candidate material.
 - OpenCode use is constrained by local agents: `skill-use` is read-only for conversational use, while `skill-builder` is backend-controlled for draft generation.
 - Drafts contain a `Publishable Skill` section plus `Draft Review` metadata. Promotion and normal skill use operate on publishable content so review notes can remain visible without leaking into runtime behavior.
+- Candidate `index.md` declares `output_language`; draft generation uses that language for both reviewable draft content and the publishable skill.
 
 ## Draft Contract
 
@@ -37,11 +39,11 @@
 
 ## Background Refresh and UI State
 
-- Context: Draft jobs run in the background and the UI polls job state. Full re-rendering originally reset scroll position and collapsed expanded material/status sections.
-- Decision: Keep polling for now, but preserve local UI state across renders.
-- Implementation shape: Scroll position and `<details>` open states are frontend-owned interaction state. Details use stable keys such as `material:<slug>:<id>` and `status:<slug>:review`.
-- Consequence: Server data can refresh without disrupting what the user is reading.
-- Future note: A more incremental state store or SSE channel may eventually replace polling, but the current approach resolves the main UX bug with low complexity.
+- Context: Draft jobs run in the background and the UI polls job state. The original string-template renderer replaced the whole DOM on every refresh, which reset scroll position, collapsed expanded material/status sections, and reset uncontrolled form controls such as `素材权重`.
+- Rejected option: Keep adding snapshot/restore patches around the string renderer. This reduces symptoms but does not make future UI safe by construction.
+- Decision: Refactor the frontend to Vite + React. Keep Vite because the app is a client-side tool behind the existing backend; use React because the UI is an interactive dashboard with forms, streaming output, polling state, and local interaction state. Astro is optimized for content-first sites, and Next.js would add server/routing machinery this app does not need.
+- Implementation shape: Backend data lives in React state. Forms and `<details>` remain mounted across polling updates, so browser-owned interaction state is not destroyed by refreshes. Programmatic values such as ASR text draft, publish token, recording state, and agent output are explicit component state.
+- Consequence: Server data can refresh without disrupting what the user is reading or editing, and future controls are protected by normal component reconciliation rather than ad hoc state restoration.
 
 ## Frontend Visual Direction
 

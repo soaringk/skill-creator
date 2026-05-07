@@ -226,6 +226,8 @@ def draft_prompt(slug: str, context_root: Path) -> str:
 Work only inside `{context_root / slug}`.
 
 Read `index.md` and all materials under `materials/`.
+Use the `output_language` value from `index.md` for both `# Publishable Skill` and
+`# Draft Review`.
 Update `draft.md` using the artifact contract from the `skill-builder` agent:
 - draft frontmatter with status and source material metadata
 - `# Publishable Skill` containing the clean runtime skill

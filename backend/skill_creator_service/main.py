@@ -14,7 +14,8 @@ from .asr import drain_events, start_dashscope_realtime, stream_transcribe_with_
 from .audio_uploads import AudioUploadError, validate_audio_container, validated_audio_suffix
 from .config import load_settings
 from .jobs import JobRunner, JobStore
-from .models import CreateSkillRequest, JobRecord, TextMaterialRequest, UseSkillRequest
+from .llm import DashScopeLLMClient, DashScopeLLMConfig
+from .models import CreateSkillRequest, JobRecord, PolishTextRequest, TextMaterialRequest, UseSkillRequest
 from .opencode import OpenCodeClient, OpenCodeConfig, draft_prompt
 from .promotion import promote_skill, publishable_body
 from .store import SkillStore, StoreError
@@ -31,6 +32,13 @@ opencode = OpenCodeClient(
         directory=settings.opencode_directory,
         provider=settings.opencode_provider,
         model=settings.opencode_model,
+    )
+)
+llm = DashScopeLLMClient(
+    DashScopeLLMConfig(
+        api_key=settings.dashscope_api_key,
+        model=settings.dashscope_llm_model,
+        base_url=settings.dashscope_llm_base_url,
     )
 )
 
@@ -80,6 +88,7 @@ def create_skill(request: CreateSkillRequest):
             slug=request.slug,
             title=request.title,
             target_category=request.target_category,
+            output_language=request.output_language,
             goal=request.goal,
             trigger_draft=request.trigger_draft,
             notes=request.notes,
@@ -108,6 +117,16 @@ def add_text_material(slug: str, request: TextMaterialRequest):
         return result
     except StoreError as exc:
         raise handle_store_error(exc) from exc
+
+
+@app.post("/api/text/polish")
+def polish_text(request: PolishTextRequest):
+    try:
+        return {"text": llm.polish_text(request.text)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.post("/api/asr/text-draft/stream")

@@ -19,6 +19,7 @@ def make_context(root: Path) -> None:
                 "title": None,
                 "status": "collecting",
                 "target_category": "Workflow",
+                "output_language": "中文",
             },
             "# Candidate Skill\n",
         ),
@@ -42,6 +43,7 @@ def test_create_skill_and_add_text_material(tmp_path: Path) -> None:
         "demo_skill",
         "Demo Skill",
         "Workflow",
+        "中文",
         "Collect examples.",
         "Use on demo requests.",
         "No notes.",
@@ -50,11 +52,14 @@ def test_create_skill_and_add_text_material(tmp_path: Path) -> None:
     detail = store.get_skill("demo_skill")
 
     assert summary.slug == "demo_skill"
+    assert summary.output_language == "中文"
     assert material.type == "text"
     assert len(detail.materials) == 1
     skill_dir = tmp_path / "contexts" / "skill_creator" / "demo_skill"
     material_doc = parse_markdown(next((skill_dir / "materials").glob("*.md")).read_text(encoding="utf-8"))
     assert set(material_doc.frontmatter) == {"id", "type", "uploaded_at", "confidence"}
+    index_doc = parse_markdown((skill_dir / "index.md").read_text(encoding="utf-8"))
+    assert index_doc.frontmatter["output_language"] == "中文"
 
 
 def test_rejects_bad_slug(tmp_path: Path) -> None:
@@ -62,13 +67,13 @@ def test_rejects_bad_slug(tmp_path: Path) -> None:
     store = SkillStore(tmp_path / "contexts" / "skill_creator", tmp_path / "rules" / "skills")
 
     with pytest.raises(StoreError):
-        store.create_skill("../bad", "Bad", "Workflow", "", "", "")
+        store.create_skill("../bad", "Bad", "Workflow", "中文", "", "", "")
 
 
 def test_promote_rejects_empty_draft(tmp_path: Path) -> None:
     make_context(tmp_path)
     store = SkillStore(tmp_path / "contexts" / "skill_creator", tmp_path / "rules" / "skills")
-    store.create_skill("demo_skill", "Demo Skill", "Workflow", "", "", "")
+    store.create_skill("demo_skill", "Demo Skill", "Workflow", "中文", "", "", "")
 
     with pytest.raises(StoreError):
         promote_skill(store, "demo_skill")
@@ -80,7 +85,7 @@ def test_promote_writes_only_publishable_section(tmp_path: Path) -> None:
     rules_root.mkdir(parents=True)
     (rules_root / "INDEX.md").write_text("# Skills Index\n", encoding="utf-8")
     store = SkillStore(tmp_path / "contexts" / "skill_creator", rules_root)
-    store.create_skill("demo_skill", "Demo Skill", "Workflow", "", "", "")
+    store.create_skill("demo_skill", "Demo Skill", "Workflow", "中文", "", "", "")
     skill_dir = tmp_path / "contexts" / "skill_creator" / "demo_skill"
     (skill_dir / "draft.md").write_text(
         dump_markdown(

@@ -74,6 +74,7 @@ class SkillStore:
             title=str(frontmatter.get("title") or slug),
             status=str(frontmatter.get("status") or "unknown"),
             target_category=frontmatter.get("target_category"),
+            output_language=frontmatter.get("output_language"),
             updated_at=str(frontmatter.get("updated_at") or "") or None,
             rules_target=frontmatter.get("rules_target"),
         )
@@ -95,6 +96,7 @@ class SkillStore:
         slug: str,
         title: str,
         target_category: str,
+        output_language: str,
         goal: str,
         trigger_draft: str,
         notes: str,
@@ -133,6 +135,7 @@ class SkillStore:
             "title": title,
             "status": "collecting",
             "target_category": target_category,
+            "output_language": output_language,
             "rules_target": None,
             "created_at": now,
             "updated_at": now,
@@ -152,11 +155,11 @@ class SkillStore:
             raise StoreError(f"Missing index.md for skill candidate: {slug}")
         _, index_body = self._read_doc(skill_dir / "index.md")
         _, draft = self._read_doc(skill_dir / "draft.md")
-        
+
         # Prefer published.md for promoted status tracking
         published_fm, promoted_body = self._read_doc(skill_dir / "published.md")
         rules_target = published_fm.get("rules_target") or summary.rules_target
-        
+
         promoted = None
         if rules_target:
             target_path = Path(rules_target)

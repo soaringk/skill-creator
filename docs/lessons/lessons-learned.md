@@ -14,6 +14,6 @@
 - Draft QA can be useful to users but harmful as runtime instructions. Keep material coverage and refinement notes visible in draft review metadata, and extract only publishable skill content for promotion/use.
 - Public deployment is mounted under `/tools/skill-creator/`; frontend API requests must include that base path so nginx routes them to the backend. Root `/api/...` belongs to the main site and can return HTML, which surfaces in the app as JSON parse errors beginning with `Unexpected token '<'`.
 - Markdown contracts are easier to parse when identity and content boundaries have one owner. Keep candidate identity in `index.md`; keep draft content boundaries in `draft.md`.
-- Background refresh should update server data, not erase local interaction state. Preserve scroll position, expanded sections, in-progress text, and visible agent output across polling renders.
+- Background refresh should update server data, not erase local interaction state. Use component identity and explicit state ownership so polling does not remount form controls or expanded sections.
 - If an error is tied to a stale job or unavailable integration, clear it after a later successful operation. Persisted stale errors are worse than no error because they contradict current state.
 - For frontend controls, visual affordance matters. A select without an arrow looks like static text; use the normal select cue unless there is a strong reason not to.

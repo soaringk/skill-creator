@@ -16,15 +16,14 @@ if [[ -f "$PID_FILE" ]]; then
 fi
 
 cd "$ROOT/frontend"
-npm run build
-nohup npm run preview >>"$LOG_FILE" 2>&1 &
+nohup npm run dev >>"$LOG_FILE" 2>&1 &
 disown
 
 sleep 0.5
-pid="$(pgrep -f "$ROOT/frontend/node_modules/.bin/vite preview --host 127.0.0.1 --port 5173" | head -n 1 || true)"
+pid="$(pgrep -f "$ROOT/frontend/node_modules/.bin/vite --host 127.0.0.1 --port 5173" | head -n 1 || true)"
 
 if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
-  echo "Frontend preview did not start. Log: $LOG_FILE" >&2
+  echo "Frontend did not start. Log: $LOG_FILE" >&2
   sed -n '1,120p' "$LOG_FILE" >&2 || true
   rm -f "$PID_FILE"
   exit 1
@@ -33,13 +32,13 @@ fi
 echo "$pid" > "$PID_FILE"
 
 for _ in {1..30}; do
-  if curl -fsS -H 'Host: kefan.life' http://127.0.0.1:5173/tools/skill-creator/ >/dev/null 2>&1; then
-    echo "Started Skill Creator frontend preview on 127.0.0.1:5173 with pid $pid"
+  if curl -fsS http://127.0.0.1:5173/ >/dev/null 2>&1; then
+    echo "Started Skill Creator frontend dev server on 127.0.0.1:5173 with pid $pid"
     echo "Log: $LOG_FILE"
     exit 0
   fi
   if ! kill -0 "$pid" 2>/dev/null; then
-    echo "Frontend preview exited during startup. Log: $LOG_FILE" >&2
+    echo "Frontend exited during startup. Log: $LOG_FILE" >&2
     sed -n '1,120p' "$LOG_FILE" >&2 || true
     rm -f "$PID_FILE"
     exit 1
@@ -47,6 +46,6 @@ for _ in {1..30}; do
   sleep 1
 done
 
-echo "Frontend preview did not become reachable within 30s. Log: $LOG_FILE" >&2
+echo "Frontend did not become reachable within 30s. Log: $LOG_FILE" >&2
 echo "Log: $LOG_FILE"
 exit 1

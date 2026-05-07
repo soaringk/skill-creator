@@ -7,8 +7,8 @@
 
 ## Runtime Shape
 
-- Backend API: `backend/skill_creator_service/` is a FastAPI service that owns filesystem writes, DashScope realtime ASR, OpenCode calls, admin-token checks, background job state, and promotion.
-- Frontend: `frontend/` is a Vite TypeScript app for creating candidates, collecting material, reviewing drafts, streaming skill-use output, and publishing.
+- Backend API: `backend/skill_creator_service/` is a FastAPI service that owns filesystem writes, DashScope realtime ASR, DashScope text-polish calls, OpenCode calls, admin-token checks, background job state, and promotion.
+- Frontend: `frontend/` is a Vite React TypeScript app for creating candidates, collecting material, reviewing drafts, streaming skill-use output, and publishing.
 - Public deployment: nginx serves `/tools/skill-creator/` and proxies `/tools/skill-creator/api/` to local processes. The public app intentionally has no account login; backend and frontend processes still bind to `127.0.0.1`.
 - OpenCode config: `.opencode/agents/` defines constrained agents. `skill-use` is read-only; `skill-builder` is backend-controlled for draft generation.
 - Documentation: `docs/` uses doc-flow durable docs plus active worklogs for handoff and future agent continuity.
@@ -17,7 +17,7 @@
 
 - Candidate state lives under the configured context root, defaulting to `data/skill_creator/`.
 - Each candidate directory contains `index.md`, `draft.md`, `published.md`, and a flat `materials/` directory.
-- `index.md` is the candidate identity and status entrypoint. It owns slug, title, status, target category, and publish target metadata.
+- `index.md` is the candidate identity and status entrypoint. It owns slug, title, status, target category, output language, and publish target metadata.
 - Material files use a small frontmatter set: `id`, `type`, `uploaded_at`, and `confidence`. The frontend derives material counts from the material array rather than storing a separate count.
 - Audio is not stored as raw candidate material in the current workflow. Recording and upload both run DashScope realtime ASR and place transcript text in the text draft; the user explicitly saves edited text as material.
 
@@ -34,7 +34,7 @@
 - The UI follows the project glassmorphism direction: translucent surfaces, visible borders, blur, restrained shadows, and clear contrast against the mesh background.
 - Mobile list view uses one primary title, `Skill 创作列表`. The `Skill Creator` product label is intentionally omitted there to avoid duplicate headings.
 - Mobile detail view keeps a compact glass back control, `← Skill 创作列表`, because it is navigation rather than branding.
-- Background job polling refreshes server data, but local UI interaction state such as scroll position and expanded `<details>` sections is preserved in frontend state.
+- Background job polling refreshes server data through React state updates. Component identity and local DOM state preserve user interactions such as selected form values, focus, scroll position, and expanded `<details>` sections.
 - Agent use streams OpenCode output to the web UI while the agent runs; it is not a fire-and-forget notification.
 
 ## Boundaries
@@ -42,7 +42,7 @@
 - Browser code is only a control surface. It must not receive provider credentials, write files, call OpenCode directly, or decide promotion safety.
 - Public clients can reach the frontend and API directly through nginx. Do not rely on the frontend as an access boundary; API routes are directly callable.
 - Do not expose the OpenCode server or other shell-capable control endpoints publicly. The app backend may call OpenCode, but OpenCode itself must remain bound to local/private interfaces.
-- DashScope realtime ASR is backend-owned. Text Material supports direct paste and ASR-to-draft; ASR-to-draft fills the text box first and only becomes candidate material after explicit save.
+- DashScope calls are backend-owned. Text Material supports direct paste, DashScope text polishing, and ASR-to-draft; these flows fill or update the text box first and only become candidate material after explicit save.
 - Only publishing requires `SKILL_CREATOR_ADMIN_TOKEN`. Creating candidates, adding material, transcribing audio, drafting, and read-only skill use do not require the admin token.
 
 ## Evolution Notes

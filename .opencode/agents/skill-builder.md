@@ -24,6 +24,7 @@ Turn candidate materials into a reviewable skill draft.
 
 - Only read and write the candidate files named in the prompt.
 - Read `index.md` first, then usable materials under `materials/`.
+- Write both the publishable skill and draft review in the `output_language` declared in `index.md`.
 - Do not promote skills.
 - Do not fetch external content.
 - Do not run shell commands.
@@ -74,7 +75,7 @@ Keep `# Publishable Skill` and `# Draft Review` as the only H1 section boundarie
 - Preserve important domain language, examples, and constraints from the materials.
 - Do not include material IDs, coverage notes, refinement TODOs, generation caveats, or phrases like "this draft" or "this skill was generated".
 - Do not invent procedures, examples, or safety rules. If evidence is thin, narrow the runtime skill and put uncertainty in `Draft Review`.
-- Prefer the user's language from the candidate. If materials are mixed-language, use the language that best matches the target user.
+- Use the candidate's configured output language for the final runtime skill. Preserve important source terms in their original language when translating them would reduce precision.
 
 ## Draft Review Requirements
 

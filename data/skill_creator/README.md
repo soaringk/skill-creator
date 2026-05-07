@@ -27,6 +27,7 @@ slug: workflow_example_skill
 title: Example Skill
 status: collecting
 target_category: Workflow
+output_language: 中文
 rules_target:
 created_at: 2026-04-28
 updated_at: 2026-04-28
@@ -90,6 +91,7 @@ Web 服务直接映射到当前文件状态机：
 
 - `GET /api/skills`: 读取所有 `*/index.md` frontmatter
 - `POST /api/skills`: 从 `_template/` 创建新候选目录
+- `POST /api/text/polish`: 调用 DashScope LLM 润色文本框内容，仅返回文本，不保存候选材料
 - `POST /api/asr/text-draft/stream`: 上传音频 realtime ASR，流式返回文本草稿
 - `WS /api/asr/realtime`: 录音 realtime ASR，流式返回文本草稿
 - `POST /api/skills/:slug/materials/text`: 创建 `materials/<material_id>.md`

@@ -33,6 +33,8 @@ class Settings:
     admin_token: str
     dashscope_api_key: str
     dashscope_model: str
+    dashscope_llm_model: str
+    dashscope_llm_base_url: str
     dashscope_websocket_url: str
     opencode_base_url: str
     opencode_username: str
@@ -44,14 +46,13 @@ class Settings:
 
 def load_settings() -> Settings:
     load_dotenv()
-    context_root = _expand_path(
-        os.getenv(
-            "SKILL_CREATOR_CONTEXT_ROOT",
-            str(PROJECT_ROOT / "data" / "skill_creator"),
-        )
-    )
     return Settings(
-        context_root=context_root,
+        context_root=_expand_path(
+            os.getenv(
+                "SKILL_CREATOR_CONTEXT_ROOT",
+                str(PROJECT_ROOT / "data" / "skill_creator"),
+            )
+        ),
         rules_root=_expand_path(
             os.getenv(
                 "SKILL_CREATOR_RULES_ROOT",
@@ -67,6 +68,11 @@ def load_settings() -> Settings:
         admin_token=os.getenv("SKILL_CREATOR_ADMIN_TOKEN", ""),
         dashscope_api_key=os.getenv("DASHSCOPE_API_KEY", ""),
         dashscope_model=os.getenv("DASHSCOPE_ASR_MODEL", "fun-asr-realtime"),
+        dashscope_llm_model=os.getenv("DASHSCOPE_LLM_MODEL", "qwen-plus"),
+        dashscope_llm_base_url=os.getenv(
+            "DASHSCOPE_LLM_BASE_URL",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        ),
         dashscope_websocket_url=os.getenv(
             "DASHSCOPE_WEBSOCKET_URL",
             "wss://dashscope.aliyuncs.com/api-ws/v1/inference",

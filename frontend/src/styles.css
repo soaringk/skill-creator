@@ -496,6 +496,18 @@ select {
   box-shadow: none;
 }
 
+.material-actions {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.42fr) minmax(140px, 0.58fr);
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .material-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .mt-2 { margin-top: 12px; }
 .mt-3 { margin-top: 20px; }
 .mb-2 { margin-bottom: 12px; }

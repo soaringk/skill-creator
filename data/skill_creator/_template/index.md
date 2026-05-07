@@ -3,6 +3,7 @@ slug:
 title:
 status: collecting
 target_category: Workflow
+output_language: 中文
 rules_target:
 created_at:
 updated_at:

@@ -2,7 +2,7 @@
 
 ## Open Risks
 
-- The frontend has improved toward a normal creation flow, but it still uses full-string rendering and manual state management. More complex interactions may need a small state/rendering abstraction.
+- The frontend has moved to React, but state is still local to the app shell. If workflows grow, split data fetching, ASR streaming, and agent streaming into focused hooks before the app component becomes too large.
 - Uploaded audio ASR now streams through the realtime endpoint. Long files may still need better progress, cancellation, and chunk-level recovery.
 - Draft jobs depend on an OpenCode server and model configuration. The UI surfaces job failure messages, but not detailed OpenCode logs or recovery guidance.
 - Promotion writes into the configured rules repository after an admin-token check. Rollback/versioning UX is not implemented.

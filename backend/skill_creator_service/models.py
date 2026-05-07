@@ -13,6 +13,7 @@ class SkillSummary(BaseModel):
     title: str
     status: str
     target_category: str | None = None
+    output_language: str | None = None
     updated_at: str | None = None
     rules_target: str | None = None
 
@@ -37,6 +38,7 @@ class CreateSkillRequest(BaseModel):
     slug: str
     title: str
     target_category: str = "Workflow"
+    output_language: str = "中文"
     goal: str = ""
     trigger_draft: str = ""
     notes: str = ""
@@ -45,6 +47,10 @@ class CreateSkillRequest(BaseModel):
 class TextMaterialRequest(BaseModel):
     text: str
     confidence: str = "medium"
+
+
+class PolishTextRequest(BaseModel):
+    text: str
 
 
 class JobRecord(BaseModel):
